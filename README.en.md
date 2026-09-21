@@ -4,228 +4,33 @@
   <img src="public/logo/icons/1024x1024.jpg" alt="ZCode" width="128" height="128" />
 </div>
 
-<p align="center">
-  <a href="README.md">简体中文</a> | English
-</p>
+<div align="center"><a href="README.md">简体中文</a></div>
 
-ZCode is an AI coding workspace that offers **desktop, browser, and terminal Agent** entry points, all sharing the same Agent runtime, communication protocol, and UI capabilities. This repository contains the clients, backend services, shared React UI, the model-provider system, and the complete Agent CLI and runtime source code.
-
-## Core Features
-
-- **One runtime, three surfaces**: Electron desktop app, Web/browser, and the terminal `zcode` share a single Agent runtime — one change covers every surface.
-- **Unified transport abstraction**: based on `@zcode/rpc`'s `IMessagePassingProtocol`, the same RPC layer runs on Electron MessagePort, WebSocket, and Node stdio.
-- **Dual-chain protocol**: the desktop live chain (`desktop-continuous`) and the mobile/web replayable chain (`web-remote-replayable`) are semantically separated, so reconnects are replayable and never lose data.
-- **Language-level coding standards**: before writing a particular language, the main Agent reads that language's coding standard (`language-standards/*.md`), which also covers static/dynamic SVG icon authoring and a Git commit-message convention.
-- **Layered architecture constraints**: `contracts` holds only types and port contracts, `core` runs the Agent loop, and `adapters` centralize all external I/O, with cross-platform support for Windows / macOS / Linux.
+ZCode is an AI coding workspace offering desktop, browser, and terminal `zcode` entry points, all sharing a single Agent runtime, protocol, and UI.
 
 ## Quick Start
 
-### Prerequisites
-
-Install Git, Node.js **24.14.0**, and pnpm **10.33.2**. [mise.toml](mise.toml) is the source of truth for tool versions. Run all commands below from the repository root.
+Requirements: Git, Node.js **24.14.0**, pnpm **10.33.2** (see [mise.toml](mise.toml)).
 
 ```bash
 pnpm bootstrap
 ```
 
-`pnpm bootstrap` installs workspace dependencies, prepares local desktop runtime assets, and runs `build:bootstrap`. The Agent CLI and runtime source code lives in [apps/zcode-cli/](apps/zcode-cli/) as a regular directory included when you clone this repository — no separate checkout or Git submodule initialization is required.
-
-Other setup / build entries:
-
-| Command                        | Purpose                                                                                                                             |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm install`                 | Install dependencies                                                                                                                |
-| `pnpm prepare:desktop-runtime` | Prepare desktop runtime assets, including remote assets by default                                                                  |
-| `pnpm prepare:remote-assets`   | Prepare remote runtime assets separately                                                                                            |
-| `pnpm bootstrap:with-remote`   | Set up dependencies and local/remote assets, then build packages sequentially; skip the desktop bundle                              |
-| `pnpm build`                   | Recursively run each workspace package's build script, including its asset-preparation steps                                        |
-
-The default `bootstrap` skips remote assets and suits local desktop development; run the matching preparation command when working with remote workspaces or validating remote distribution assets.
-
-## Development & Usage
-
-### Desktop
-
-```bash
-pnpm dev:desktop
-
-# Use the test environment
-pnpm dev:desktop:test
-```
-
-`pnpm dev:desktop` defaults to `pnpm dev:desktop:prod` and uses the production service configuration. The startup script prepares local runtime assets, builds the desktop Agent, then starts Electron and source watchers.
-
-To use a separate development data directory, set `ZCODE_DATA_BASE_DIR`. On macOS / Linux:
-
-```bash
-ZCODE_DATA_BASE_DIR="$HOME/.zcode-dev-home" pnpm dev:desktop:test
-```
-
-### Remote (SSH / WSL)
-
-Run `pnpm bootstrap:with-remote` to prepare remote assets (mock-cdn) first, then `pnpm dev:desktop`; choose "download locally, then upload" when connecting to a remote project. Dev assets come from `packages/desktop/mock-cdn` and local build output, uploaded over SFTP.
-
-### Web Development
-
-```bash
-pnpm dev:web
-
-# Set the backend workspace (macOS / Linux)
-ZCODE_SERVER_WORKSPACE=/path/to/project pnpm dev:web
-```
-
-This starts both the Web dev server (default `http://localhost:5173`) and the backend (default `http://localhost:3030`). `/ws` and general `/api` requests are proxied to the local backend; `/api/v1/oauth/token` is proxied separately to the configured product service.
-
-After changing Agent source, run `pnpm --filter @zcode/cli... build` and restart the service; to validate the full distribution, see the "ZCode CLI distribution" section under Packaging.
-
-### ZCode CLI distribution
-
-The command-line distribution bundles the TUI, Web client, and Agent behind one `zcode` command. With no arguments it starts the TUI; a leading `--web` starts Web mode; all other arguments go to the existing Agent CLI. Both modes run locally without Electron.
-
-```bash
-# Start the terminal UI by default
-zcode
-
-# Start the Web interface
-zcode --web
-
-# Set the project and port without opening a browser automatically
-zcode --web --workspace /path/to/project --port 3030 --no-open
-
-# Show CLI or Web options
-zcode --help
-zcode --web --help
-```
-
-In Web mode it uses the current directory as the workspace, listens on `127.0.0.1` without token authentication by default, picks an available port, and opens a browser. Use the URL printed in the terminal and press `Ctrl+C` to stop. For LAN access use `--host 0.0.0.0`; listening on a non-local address generates an access token by default — use `--token` to set one or `--no-token` to disable it.
-
-When starting the general Web service's HTTP entry directly, configure API/WebSocket auth with `ZCODE_SERVER_AUTH_TOKEN`; when creating the service programmatically, use the `authToken` option.
-
-`pnpm build:zcode` only creates the distribution; it does not replace an existing `zcode` on `PATH`. If the command still points to an older install, check it with `command -v zcode` on macOS / Linux or `where.exe zcode` on Windows.
-
-### CLI Source Development
-
-```bash
-pnpm --filter @zcode/cli dev --help
-pnpm --filter @zcode/cli dev
-
-# Build the CLI and its workspace dependencies
-pnpm --filter @zcode/cli... build
-node apps/zcode-cli/packages/cli/dist/zcode.cjs --help
-```
-
-This entry runs the Agent CLI directly and does not handle the distribution's `--web` switch; use `pnpm dev:web` for Web development.
-
-## Configuration
-
-The root [.env.example](.env.example) provides sample service URLs and build configuration. Copy it to `.env` as needed and place local overrides in `.env.local`. Select the Desktop dev environment with `dev:desktop:test` / `dev:desktop:prod`.
-
-| Setting                              | Purpose                                                                                 |
-| ------------------------------------ | --------------------------------------------------------------------------------------- |
-| `ZCODE_DATA_BASE_DIR`                | Base directory for application data, stored under its `.zcode/` subdirectory            |
-| `ZCODE_SERVER_WORKSPACE`             | Workspace path for the Web backend                                                      |
-| `ZCODE_BUILTIN_PROVIDER_CONFIG_FILE` | Path to a local provider configuration file; uses the built-in config when unset        |
-| `ZCODE_DIST_BASE_URL`                | Download base URL used by the CLI distribution installer                                |
-
-Runtime variables can be set explicitly in the environment of the startup command; see [config/README.md](config/README.md) for the default configuration shipped with the client.
-
-## Architecture Overview
-
-Data roughly flows `three surfaces → @zcode/ui hooks → IServiceAccessor → 40+ RPC services → @zcode/rpc transport → Agent runtime`:
-
-- **Desktop**: each window owns an independent Host `utilityProcess`, which talks to the Agent over stdio; the renderer accesses services only through a MessagePort RPC channel.
-- **Server**: has both an HTTP entry and a stdio entry (for remote hosts); stdio uses a two-phase hello/hello-ack handshake and stdout carries only RPC frames.
-- **Agent**: in `apps/zcode-cli`, `contracts` (pure contracts) → `core` (Turn state machine + Agent loop + permissions) → `adapters` (exec/fs/http/model/storage) → `bootstrap` (app facade + protocol server), with ZCode Protocol V4 providing strict typing and runtime validation.
-
-## Packaging
-
-See [third-party/README.md](third-party/README.md) for notice generation, distribution checks, and where notices are included in each distribution.
-
-### Desktop
-
-```bash
-pnpm bundle:desktop
-
-# Set the target platform and CPU architecture
-pnpm bundle:desktop -- --os win --arch x64
-
-pnpm bundle:desktop -- --help
-```
-
-The default target is macOS arm64, and the default output directory is `packages/desktop/dist/`. `--os` accepts `mac`, `win`, or `linux`; `--arch` accepts `x64` or `arm64`. Packaging and signing require the tools and configuration for the target platform.
-
-Installation: open the produced DMG and drag ZCode to "Applications". Local builds are unsigned; if macOS blocks first launch, run:
-
-```bash
-sudo xattr -rd com.apple.quarantine /Applications/ZCode.app
-```
-
-### ZCode CLI distribution
-
-Run `pnpm build:zcode` to build the CLI/TUI, backend, and Web client, collect the TUI native libraries, workers, and runtime dependencies, then assemble the distribution. Running it still requires Node.js; use the version in `mise.toml`.
-
-Before packaging, set the download base URL with `ZCODE_DIST_BASE_URL` (via `.env`, `.env.local`, or the environment) or pass it through `--base-url`. The URL below is a placeholder; replace it when publishing:
-
-```bash
-pnpm build:zcode --base-url https://downloads.example.com/zcode/
-
-# When ZCODE_DIST_BASE_URL is already configured
-pnpm build:zcode
-
-# Repackage existing outputs
-pnpm build:zcode --skip-build
-
-# Show options for version, output directory, and more
-pnpm build:zcode --help
-```
-
-The version defaults to the root `package.json` version; output is written to `dist/zcode/`:
-
-- `releases/<version>/zcode-<version>.tar.gz`: runtime package.
-- `releases/<version>/sha256.txt`: checksum file.
-- `latest.json` and `install.sh`: version index and installer.
-
-Upload the whole directory to the configured base URL. The installer downloads the runtime package, installs to `~/.zcode/runtime` by default, and creates the `zcode` command in `~/.local/bin`; override the install and bin directories with `ZCODE_DIST_HOME` and `ZCODE_DIST_BIN_DIR`.
-
-To test a packaged build locally without uploading or installing:
-
-```bash
-zcode_version=$(node -p "require('./dist/zcode/latest.json').version")
-mkdir -p dist/zcode/debug
-tar -xzf "dist/zcode/releases/$zcode_version/zcode-$zcode_version.tar.gz" -C dist/zcode/debug
-# Start the TUI by default
-node dist/zcode/debug/zcode/bin/zcode.mjs
-# Start Web mode
-node dist/zcode/debug/zcode/bin/zcode.mjs --web --workspace "$PWD" --port 3030 --no-open
-```
-
-Open `http://127.0.0.1:3030` to validate the full flow, with one backend serving the Web pages and running the Agent. The port must be available; if `pnpm dev:web` is running, choose another `--port`.
-
-## Repository Structure
-
-| Directory                                            | Responsibility                                                                          |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `packages/desktop`                                   | Electron Main, Host, Renderer, and desktop packaging                                    |
-| `packages/web`                                       | Web client                                                                              |
-| `packages/server`                                    | HTTP / WebSocket services and remote connections                                        |
-| `packages/zcode-server-cli`                          | Standalone server startup and process management                                        |
-| `packages/ui`                                        | Shared React components, hooks, and Zustand state                                       |
-| `packages/services`                                  | Business services and persistence                                                       |
-| `packages/shared`, `packages/rpc`, `packages/client` | Shared protocols and types, RPC framework, and Agent client SDK                         |
-| `packages/provider`, `packages/provider-node`        | Common provider capabilities and Node implementations                                   |
-| `apps/zcode-cli`                                     | Agent CLI, TUI, runtime, and tools                                                      |
-| `scripts`, `config`, `third-party`                   | Build / maintenance scripts, built-in configuration, and third-party notice materials   |
-
-## Engineering Guidelines
-
-- Update the corresponding spec before adding or changing behavior; follow the `.agents/` skills and the root architecture constraints.
-- Development constraints follow the root [AGENTS.md](AGENTS.md), [CONTEXT.md](CONTEXT.md) (plugin-store domain vocabulary) and [DESIGN.md](DESIGN.md) (UI design guidelines); default to cross-platform support for Windows / macOS / Linux.
-- Commit messages follow a conventional-commit style; keep commits small and focused.
-
-## Project Notice
-
-See [NOTICE.md](NOTICE.md) for feature and promotion scope, maintenance policy, execution and data risks, licensing, and third-party copyright information.
+`pnpm bootstrap` installs dependencies, prepares desktop runtime assets, and runs the basic build.
+
+## Common Commands
+
+| Command                                   | Purpose                                |
+| ----------------------------------------- | -------------------------------------- |
+| `pnpm dev:desktop`                        | Start the desktop app (Electron)       |
+| `pnpm dev:desktop:test`                   | Start the desktop app with test config |
+| `pnpm dev:web`                            | Start Web client and server            |
+| `pnpm --filter @zcode/cli dev`            | Start the terminal Agent CLI           |
+| `zcode` `zcode --web`                     | CLI distribution (TUI / Web mode)      |
+| `pnpm bundle:desktop`                     | Package the desktop app                |
+| `pnpm build:zcode`                        | Assemble the CLI distribution          |
+| `pnpm typecheck` / `pnpm lint`            | Type check / lint                      |
 
 ## License
 
-This project is released under the **Apache-2.0** license; see [LICENSE](LICENSE). Third-party copyrights are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+Released under the **Apache-2.0** license; see [LICENSE](LICENSE).
