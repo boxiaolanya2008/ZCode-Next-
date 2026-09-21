@@ -204,6 +204,46 @@ class Config {
 }
 ```
 
+### 4.8 高级语法特性
+
+- `sealed interface`：表达“可穷举的协议/状态”，比 `sealed class` 更灵活（同一模块多实现）；无字段分支用 `data object`，有字段用 `data class`。
+- `value class` + `@JvmInline`：对单值做强类型包装（如 `UserId`），替代裸 `String`/`Long` 魔法字面量，且多数场景无装箱。
+- 内联高阶函数 + `reified`：在泛型内保留具体类型，避免 `as?` 链。
+- 委托属性 `by lazy` / `by remember`：延迟初始化与缓存；Compose 用 `remember {}` 绑定重组生命周期。
+- `buildList {}` / `buildMap {}` / `buildSet {}`：在受限作用域内构建不可变集合，外部仍只读，避免临时 mutable 泄漏。
+- `runCatching {}`：把调用折叠为 `Result<T>`，配合 `mapCatching`/`getOrElse` 组合，比散落 try/catch 更可读。
+- `infix`、`operator` 重载、`tailrec`、解构（`for ((k, v) in map)`）适量使用，提升表达力但要克制，避免可读性下降。
+
+```kotlin
+@JvmInline
+value class UserId(val raw: String)                  // 类型安全 id，替代裸 String 魔法值
+
+fun selectedNames(users: List<User>) = buildList {   // 作用域内构建，外部只读
+    users.filter { it.status == User.Status.ACTIVE }.forEach { add(it.name) }
+}
+
+fun parseCount(text: String): Result<Int> =
+    runCatching { text.trim().toInt() }              // 错误折叠为 Result
+
+val a = parseCount("12").getOrDefault(0)
+```
+
+```kotlin
+sealed interface FeedItem {                           // 穷举协议：可跨多个 data object/data class
+    data object Skeleton : FeedItem
+    data class Post(val id: UserId, val title: String) : FeedItem
+    data class Ad(val token: String) : FeedItem
+}
+
+val title = when (item) {                             // when 表达式保证穷举，新增分支编译期强制
+    FeedItem.Skeleton -> null
+    is FeedItem.Post  -> item.title
+    is FeedItem.Ad    -> null
+}
+```
+
+- 高级语法用于“让表达更精确”，不是为了炫技；若一个特性让读者需要查文档才能看懂，优先用更直白的写法。
+
 ## 5. 类型系统与内存
 
 ### 5.1 不可变
@@ -399,7 +439,13 @@ dependencyResolutionManagement {
 // gradle/libs.versions.toml
 [versions]
 composeBom = "2025.06.00"
+material3 = "1.5.0-alpha"      // Material 3 Expressive 实验性分支（见 9.11）
 lifecycle = "2.8.6"
+kotlin = "2.2.20"              // 与 Compose 编译器 Gradle 插件同版本
+
+[libraries]
+androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+androidx-compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
 ```
 
 ### 9.2 AndroidX 选型
@@ -459,6 +505,7 @@ class MainViewModel(private val repo: Repo) : ViewModel() {
 ### 9.5 Jetpack Compose 要点
 
 - 声明式：`@Composable` 函数，状态提升到上层，事件回调下传。
+- Material 3 采用 **Expressive 组件体系**（依赖 `1.5.0-alpha`，见 9.11）；传统 stable 组件仅在确实无等价物时使用，逐步淘汰（见 9.12）。
 - 状态管理用 `remember { mutableStateOf(...) }`、`rememberSaveable`（跨配置）与 `derivedStateOf`。
 - 重组最小化：避免昂贵计算在重组内重复，用稳定类型与 `remember`.
 
@@ -548,6 +595,92 @@ class LoginViewModelTest {
     }
 }
 ```
+
+### 9.10 Jetpack Compose 开发环境配置
+
+- Kotlin ≥ 2.0 起 Compose 编译器随独立 Gradle 插件发布：模块应用 `org.jetbrains.kotlin.plugin.compose`，**不再设置** `composeOptions.kotlinCompilerExtensionVersion`，编译器版本由该插件版本决定，从根上避免 KGP 与实际编译器的版本错配。
+- 仅在使用 UI 的模块开启 `buildFeatures { compose = true }`；纯业务模块不要开。
+- Compose 结构化依赖统一走 Compose BOM；Material 3 单独指定版本（`1.5.0-alpha`，见 9.11），不与 BOM 混设导致覆盖失效。
+- 用 `-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi` 统一放行 experimental 组件，并让 CI 的 `allWarningsAsErrors` 仍能暴露未收敛的 opt-in 使用点。
+
+```kotlin
+// 根 build.gradle.kts
+plugins {
+    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.20" apply false
+}
+
+// 模块 :app/build.gradle.kts
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")   // Compose 编译器 Gradle 插件（Kotlin 2.x 标配）
+}
+android {
+    compileSdk = 35
+    buildFeatures { compose = true }
+    // composeOptions {} —— 无需再写 kotlinCompilerExtensionVersion
+}
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll(listOf(
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
+        ))
+    }
+}
+dependencies {
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.material3)     // 1.5.0-alpha（Material 3 Expressive）
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.testManifest)
+}
+```
+
+### 9.11 Material 3 Expressive 全量组件体系（1.5.0-alpha）
+
+- 定位：Material 3 Expressive 是 Material 3 的下一代表达性组件体系，覆盖**列表、卡片、按钮、输入、导航栏/抽屉/底部栏、对话框、日期/时间选择器**等全部大类，在排版、间距/填充、焦点与手势语义上系统化加强，同风格全局一致。
+- 版本：将 `material3` 固定到实验性分支 **`1.5.0-alpha`**（`androidx.compose.material3:material3:1.5.0-alpha`）。alpha 属预发布，API 可能随 alpha 版本调整——**只按本规范 pin 的该分支接入，不随意追新**；变更前先看 release notes / API diff。
+- 接入方式：凡 expressive 已提供等价的组件，一律使用 expressive 组件；组件按“交互语义”分组选用，不按名称机械对应。
+- experimental 组件必须 `@OptIn(ExperimentalMaterial3ExpressiveApi::class)`；已在模块级用 `-opt-in=` 统一开启时，可省略逐个注解但仍遵循 semantics。
+
+```kotlin
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)   // 必须显式 opt-in（或模块级统一开启）
+@Composable
+fun ContactList(contacts: List<Contact>) {
+    MaterialTheme {
+        // 代表性写法：expressive 列表（精确签名/命名以所 pin 的 1.5.0-alpha 发布为准）
+        ListRecord {
+            contacts.forEach { c ->
+                Record(
+                    leading = Icon(Icons.Default.Person, contentDescription = c.name),
+                    onClick = { openProfile(c.id) },
+                ) {
+                    Text(c.name)
+                }
+            }
+        }
+    }
+}
+```
+
+- 全量覆盖虽广，仍建议**按需引入**：先用得上的 expressive 组件（列表/对话框/选择器），逐步铺开到其余大类，避免一次性大面积替换产生回归。
+
+### 9.12 剔除已弃用的传统 Material 3 稳定组件
+
+- 原则：Material 3 Expressive 中**已提供等价物**的传统（stable）Material 3 组件视为“弃用使用”。新代码一律使用 expressive 对应物；存量代码按下表逐步替换，且**不再新增对传统组件的引用**。
+- 迁移以“交互语义”对齐，而非机械改名；替换后必须保持可访问性（焦点序、`contentDescription`、`onClick`/`toggleable`）与深色模式 token 不回退。
+
+| 交互 / 场景 | 传统 Material 3（避免新增） | Expressive 做法 |
+|---|---|---|
+| 列表展示 / 单选多选 | 手写 `Row` + 传统列表项 | expressive 列表（如 `ListRecord`）＋预置排版/焦点语义 |
+| 对话框 / 确认 | 传统 `AlertDialog` 手写布局 | expressive 对话框（排版与手势语义化） |
+| 日期 / 时间选择 | 传统 `DatePicker` / `TimePicker` | expressive 选择器组件 |
+| 顶层导航 | 传统 `TopAppBar`、`NavigationRail`/`NavigationBar` | expressive 导航组件（新焦点与手势） |
+| 按钮家族 | 传统 `Button`/`FilledButton`/`IconButton` | expressive 按钮变体 |
+
+> 表中 “expressive 组件”精确名称与入参以所 pin 的 `material3:1.5.0-alpha` 发布为准；本表用于迁移方向与验收标准，不确定项回查官方 release notes / API diff，不得凭感觉改写 API。
+
+- 替换后统一回归三类检查：UI 测试（截图/关键交互）、无障碍（对讲焦点序与描述）、主题 token（`MaterialTheme` 边距/圆角/深色）覆盖 9.9 的 Compose/Espresso 用例。
 
 ## 10. 构建 / 测试 / 发布
 
@@ -662,6 +795,8 @@ fun safe(id: String?) {
 - [ ] collect 未阻塞，Flow 用 stateIn/whileSubscribed 恰当。
 - [ ] 状态暴露只读 `StateFlow`，一次性事件用 Channel。
 - [ ] Compose 状态用 remember/derivedStateOf，重组最小化。
+- [ ] Compose 编译器用 Gradle 插件（`org.jetbrains.kotlin.plugin.compose`），未写 kotlinCompilerExtensionVersion。
+- [ ] Material 3 固定 `1.5.0-alpha`，Expressive 组件按 9.11 接入，传统 stable 组件不再新增（9.12）。
 - [ ] View 生命周期与协程取消绑定（viewLifecycleOwner）。
 - [ ] 危险权限运行时请求，exported 显式。
 - [ ] cleartext 按环境关闭，HTTPS 证书校验开启。
@@ -675,5 +810,6 @@ fun safe(id: String?) {
 - Kotlin 官方文档（kotlinlang.org）
 - kotlinx.coroutines & kotlinx.serialization 指南
 - Android 官方：Compose、ViewModel、Lifecycle
+- Android Developers — Material 3 Expressive（release notes / API diff）
 - JetBrains Kotlin Style Guide
 - Detekt / Ktlint 官方规则
