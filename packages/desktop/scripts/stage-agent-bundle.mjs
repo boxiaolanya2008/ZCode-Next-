@@ -8,10 +8,14 @@
 // bundled-agents/，没有 cli/dist/。于是 dev 一直跑着上一次打包时留下的那份 ——
 // 实测陈旧 3 天，任何 agent CLI 侧改动在 dev 里静默不生效，排查时会把「改动没生效」
 // 误判成「代码没起作用」。两边共用这一份，dev 与打包不可能再各自漂移。
-import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 export const AGENT_BUNDLE_SOURCE_RELATIVE = "apps/zcode-cli/packages/cli/dist/zcode.cjs";
+// 语言编码规范目录：与 zcode.cjs 同级 sidecar，随桌面 agent 运行时一起携带。
+// 运行时 resolveLanguageStandardsDir() 按 `<zcode.cjs 目录>/language-standards` 解析。
+export const LANGUAGE_STANDARDS_SOURCE_RELATIVE =
+  "apps/zcode-cli/packages/cli/dist/language-standards";
 
 export function resolveAgentBundlePaths({ repoRoot, platformKey }) {
   const glmDir = resolve(repoRoot, "packages", "desktop", "bundled-agents", platformKey, "glm");
@@ -20,6 +24,8 @@ export function resolveAgentBundlePaths({ repoRoot, platformKey }) {
     glmDir,
     stagedBundlePath: resolve(glmDir, "zcode.cjs"),
     stagedMetaPath: resolve(glmDir, ".node-bundle-meta.json"),
+    languageStandardsSource: resolve(repoRoot, LANGUAGE_STANDARDS_SOURCE_RELATIVE),
+    stagedLanguageStandardsDir: resolve(glmDir, "language-standards"),
   };
 }
 
@@ -29,16 +35,26 @@ export function resolveAgentBundlePaths({ repoRoot, platformKey }) {
  * （zcode-agent / zcode-acp 等）和旧 meta 会被一并打进安装包（CI 干净检出不会有，本地会）。
  */
 export function stageAgentBundle({ repoRoot, platformKey, log = console.log }) {
-  const { cliBundlePath, glmDir, stagedBundlePath, stagedMetaPath } = resolveAgentBundlePaths({
-    repoRoot,
-    platformKey,
-  });
+  const {
+    cliBundlePath,
+    glmDir,
+    stagedBundlePath,
+    stagedMetaPath,
+    languageStandardsSource,
+    stagedLanguageStandardsDir,
+  } = resolveAgentBundlePaths({ repoRoot, platformKey });
   if (!existsSync(cliBundlePath)) {
     throw new Error(`[stage:agent-bundle] agent bundle 源产物不存在：${cliBundlePath}`);
   }
   rmSync(glmDir, { recursive: true, force: true });
   mkdirSync(glmDir, { recursive: true });
   copyFileSync(cliBundlePath, stagedBundlePath);
+  if (existsSync(languageStandardsSource)) {
+    cpSync(languageStandardsSource, stagedLanguageStandardsDir, { recursive: true });
+    log(
+      `[stage:agent-bundle] staged language-standards (${languageStandardsSource} -> ${stagedLanguageStandardsDir})`,
+    );
+  }
   const meta = {
     runtime: "electron-node",
     entry: "zcode.cjs",

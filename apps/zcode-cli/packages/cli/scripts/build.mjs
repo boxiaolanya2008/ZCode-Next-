@@ -1,4 +1,4 @@
-import { chmod, readFile, rm } from "node:fs/promises";
+import { chmod, cp, mkdir, readFile, rm } from "node:fs/promises";
 import { readThirdPartyNotices, stageThirdPartyNotices } from "../../../../../scripts/third-party-notices.mjs";
 import { basename, dirname, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -12,6 +12,25 @@ const packageJsonFile = "package.json";
 const rootPackageVersionError = "Root package.json must define a non-empty string version.";
 const desktopAgentBuildFlag = "--desktop-agent";
 export const resolveBuildExternal = () => ["@zcode/tui", "playwright-core", "koffi"];
+
+// 语言编码规范目录随 CLI/SEA/桌面共享 sidecar 布局携带。
+// 源码位于 @zcode/core 的 src/context/language-standards；buildCli 把这些 .md 复制到
+// dist/language-standards，运行时 resolveLanguageStandardsDir() 以 `<zcode.cjs 目录>` 解析。
+export const stageLanguageStandards = async ({ cliDirectory } = {}) => {
+  const coreStandardsSource = resolve(
+    cliDirectory ?? cliRoot,
+    "../core/src/context/language-standards",
+  );
+  const targetDirectory = cliDirectory ?? cliRoot;
+  const distTarget = resolve(targetDirectory, "dist", "language-standards");
+  await mkdir(distTarget, { recursive: true });
+  await cp(coreStandardsSource, distTarget, {
+    recursive: true,
+    // 只携带 Markdown 规范，不把源码/产物带进运行时词表。
+    filter: (source) => source.endsWith(".md"),
+  });
+  return distTarget;
+};
 
 export const readZodBuildVersion = async () => {
   const sharedPackage = JSON.parse(
@@ -267,6 +286,7 @@ export const buildCli = async ({
 
   await chmod(outfile, executableFileMode);
   await stageThirdPartyNotices(resolve(cliDirectory, "dist"), resolve(rootDirectory, "../.."));
+  await stageLanguageStandards({ cliDirectory });
 };
 
 const entryPath = process.argv[1];
