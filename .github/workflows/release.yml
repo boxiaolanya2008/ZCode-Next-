@@ -132,8 +132,8 @@ jobs:
               diff_text = f.read()
           body = {
               "model": "deepseek-v4-flash",
-              # 禁用思考（reasoning）：仅生成结论，不输出推理链
-              "thinking": False,
+              # 禁用思考（reasoning）：DeepSeek 用 ThinkingOptions 对象，type=disabled 表示关闭
+              "thinking": {"type": "disabled"},
               "messages": [
                   {"role": "system", "content": "你是一名发布说明撰写者。请基于给定的提交差异(Git commits/stat)写一份精炼专业的 GitHub Release Notes，中文。结构：## 简介(1-2句)、## 主要变更(bullet，按模块分组)、## 修复与改进(bullet)。只依据给定 diff 事实，禁止虚构内容。"},
                   {"role": "user", "content": diff_text},
