@@ -62,6 +62,8 @@ jobs:
       - name: Bundle desktop (${{ matrix.os }} / x64)
         run: pnpm bundle:desktop -- --os ${{ matrix.os }} --arch x64
         env:
+          # 强制生产风味：productName=ZCode++、产物不带 Preview/_TEST。
+          ZCODE_ENV: "production"
           HUSKY: "0"
 
       - name: Upload installers
