@@ -48,7 +48,8 @@ export type ContextSource =
   | "output_style" // 输出风格
   | "context_management" // 长上下文管理提示
   | "desktop_context" // ZCode Desktop 渲染与交互协议
-  | "language_standards"; // 语言编码规范（稳定段：写某语言代码前先读对应规范）
+  | "language_standards" // 语言编码规范（稳定段：写某语言代码前先读对应规范）
+  | "engineering_conventions" // 工程约定（稳定段：SVG 图标制作 + Git 提交信息格式）
 
 export type ContextInjectionTarget = "system" | "meta_user";
 

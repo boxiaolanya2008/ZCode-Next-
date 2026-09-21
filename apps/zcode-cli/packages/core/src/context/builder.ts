@@ -15,6 +15,7 @@ import { estimateTokens } from "./utils.js";
 import { buildCliPrefixSection } from "./sections/cli-prefix.js";
 import { buildIdentitySection } from "./sections/identity.js";
 import { buildLanguageStandardsSection } from "./sections/language-standards.js";
+import { buildEngineeringConventionsSection } from "./sections/engineering-conventions.js";
 import { buildWorkflowActorIdentitySection } from "./sections/workflow-actor.js";
 import { buildEnvInfoSection, buildGitSystemContextSection } from "./sections/env-info.js";
 import { buildSkillsSection } from "./sections/skills.js";
@@ -122,6 +123,8 @@ export class ContextBuilder {
       sections.push(buildIdentitySection(activeOutputStyle));
       // 语言编码规范（Main Agent 稳定段）：指示模型写某语言代码前先读对应规范。
       sections.push(buildLanguageStandardsSection());
+      // 工程约定（Main Agent 稳定段）：SVG 图标制作 + Git 提交信息格式。
+      sections.push(buildEngineeringConventionsSection());
     }
 
     // 3. Dynamic system context
