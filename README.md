@@ -1,7 +1,7 @@
 # ZCode-Next++
 
 <div align="center">
-  <img src="public/logo/icons/1024x1024.png" alt="ZCode" width="128" height="128" />
+  <img src="public/logo/icons/1024x1024.jpg" alt="ZCode" width="128" height="128" />
 </div>
 
 <p align="center">
