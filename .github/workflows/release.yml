@@ -84,6 +84,76 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - uses: actions/checkout@v4
+        with:
+          # 需要完整历史与标签来计算前后 tag 的差异
+          fetch-depth: 0
+
+      # 用 diff 对比相邻发布 tag，调用用户自己的 DeepSeek 模型生成发布说明。
+      # 密钥只从仓库 Secret 读取（DEEPSEEK_API_KEY），绝不写进仓库；GitHub 自动对 Secret 脱敏。
+      - name: Generate release notes from diff via DeepSeek
+        shell: bash
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          set -euo pipefail
+          CUR_TAG="${GITHUB_REF#refs/tags/}"
+          PREV_TAG=$(git tag --sort=-v:refname | grep '^v' | grep -v "^${CUR_TAG}$" | head -n 1 || true)
+          echo "current=${CUR_TAG} previous=${PREV_TAG:-none}"
+
+          # 无论是否调用模型，最终都产出 RELEASE_NOTES.md，保证 body_path 恒有文件。
+          if [ -z "$PREV_TAG" ] || [ -z "$DEEPSEEK_API_KEY" ]; then
+            {
+              echo "# Release ${CUR_TAG}";
+              echo;
+              echo "> 未启用模型生成：缺少上一 tag 或未配置 DEEPSEEK_API_KEY Secret。";
+              echo;
+              echo "## Commits";
+              git log --oneline --no-merges "${PREV_TAG:-$(git rev-list --max-parents=0 HEAD)}..HEAD" || true;
+            } > RELEASE_NOTES.md
+            echo "skipped model notes (no previous tag or no API key)"
+            exit 0
+          fi
+
+          {
+            echo "# Diff ${PREV_TAG}..${CUR_TAG}";
+            echo;
+            echo "## Commits";
+            git log --oneline --no-merges "${PREV_TAG}..HEAD" || true;
+            echo;
+            echo "## Changed files";
+            git diff --stat "${PREV_TAG}..HEAD" || true;
+          } > /tmp/diff_input.txt
+
+          python3 - "$DEEPSEEK_API_KEY" <<'PY'
+          import json, os, sys, urllib.request
+          key = sys.argv[1]
+          with open("/tmp/diff_input.txt", encoding="utf-8") as f:
+              diff_text = f.read()
+          body = {
+              "model": "deepseek-v4-flash",
+              # 禁用思考（reasoning）：仅生成结论，不输出推理链
+              "thinking": False,
+              "messages": [
+                  {"role": "system", "content": "你是一名发布说明撰写者。请基于给定的提交差异(Git commits/stat)写一份精炼专业的 GitHub Release Notes，中文。结构：## 简介(1-2句)、## 主要变更(bullet，按模块分组)、## 修复与改进(bullet)。只依据给定 diff 事实，禁止虚构内容。"},
+                  {"role": "user", "content": diff_text},
+              ],
+              "temperature": 0.4,
+          }
+          req = urllib.request.Request(
+              "https://api.deepseek.com/chat/completions",
+              data=json.dumps(body).encode("utf-8"),
+              headers={"Content-Type": "application/json", "Authorization": "Bearer " + key},
+              method="POST",
+          )
+          with urllib.request.urlopen(req, timeout=180) as resp:
+              data = json.load(resp)
+          notes = data["choices"][0]["message"]["content"]
+          with open("RELEASE_NOTES.md", "w", encoding="utf-8") as f:
+              f.write(notes + "\n")
+          print("wrote RELEASE_NOTES.md from DeepSeek")
+          PY
+
       - name: Download installers
         uses: actions/download-artifact@v4
         with:
@@ -94,4 +164,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*
-          generate_release_notes: true
+          body_path: RELEASE_NOTES.md
+          generate_release_notes: false
