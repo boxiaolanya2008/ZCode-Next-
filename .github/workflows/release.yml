@@ -51,13 +51,13 @@ jobs:
         env:
           HUSKY: "0"
 
-      # electron-builder 的 pacman 打包路径依赖 fpm → bsdtar（来自 libarchive-tools），
-      # rpm 目标还需 rpm。缺 bsdtar 时会出现 fpm 调用失败（exit 127）。仅 Linux runner 需要。
+      # electron-builder 的 pacman 打包路径依赖 fpm → bsdtar；在 Debian/Ubuntu 上 bsdtar
+      # 由 libarchive-tools 提供，不是独立软件包，不能单列。rpm 目标还需 rpm。仅 Linux runner 需要。
       - name: Install Linux packaging dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libarchive-tools bsdtar rpm
+          sudo apt-get install -y --no-install-recommends libarchive-tools rpm
 
       - name: Bundle desktop (${{ matrix.os }} / x64)
         run: pnpm bundle:desktop -- --os ${{ matrix.os }} --arch x64
