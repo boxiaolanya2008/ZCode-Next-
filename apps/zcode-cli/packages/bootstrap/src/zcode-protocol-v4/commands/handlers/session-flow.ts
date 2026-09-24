@@ -7,7 +7,7 @@ import type {
   CommandResult,
   SubmissionMode,
 } from "@zcode/shared/zcode-protocol-v4";
-import type { ModelSelection } from "@zcode/shared";
+import { resolveAgentWorkModeSystemPrompt, type ModelSelection } from "@zcode/shared";
 import { createModelExecutionContext } from "../../../zcode-protocol/model-execution.js";
 import type { SteerTurnOptions } from "../../../app/types.js";
 import { parseProviderQualifiedModelSelection } from "../../../app/provider-registry-selection.js";
@@ -193,6 +193,13 @@ async function sendText(
   }
   const attachments = await mapAttachmentRefsToTurnAttachments(record.app, payload.attachments);
   const submittedExecutionState = resolveSubmittedExecutionState(record, payload);
+  // workMode：本轮起用模式提示词整段替换默认 system prompt（非默认模式）。
+  // 默认（编码）模式解析为 undefined，写回后保持内建提示词；空闲时重建 context，下一轮生效。
+  if (payload.workMode !== undefined) {
+    record.app.runtime.updateConfig({
+      systemPrompt: resolveAgentWorkModeSystemPrompt(payload.workMode),
+    });
+  }
   const submissionIntent = (options: Parameters<typeof inputIntentMetadata>[1]) =>
     inputIntentMetadata(envelope, { ...options, ...submittedExecutionState });
   const routingMode = host.getInputRoutingMode?.(envelope.sessionId ?? "") ?? null;

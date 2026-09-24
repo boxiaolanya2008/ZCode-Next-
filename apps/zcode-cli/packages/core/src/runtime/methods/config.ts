@@ -47,7 +47,10 @@ export async function setExecutionState(
 
 export function updateConfig(
   this: AgentRuntimeInternal,
-  patch: Pick<AgentRuntimeConfig, "mode" | "planEnabled" | "language" | "outputStyle">,
+  patch: Pick<
+    AgentRuntimeConfig,
+    "mode" | "planEnabled" | "language" | "outputStyle" | "systemPrompt"
+  >,
 ): void {
   if (patch.mode !== undefined || patch.planEnabled !== undefined) {
     const previous = resolveExecutionState(this.config);
@@ -64,6 +67,14 @@ export function updateConfig(
   }
   if ("outputStyle" in patch) {
     this.config.outputStyle = patch.outputStyle;
+    if (!this.activeTurn) {
+      rebuildContextPrefix(this);
+    }
+  }
+  // 工作模式提示词：整段替换默认 stable body（customSystemPrompt 通道）。
+  // 与 outputStyle/language 同一收敛点：空闲时重建 context 前缀，下一轮生效。
+  if ("systemPrompt" in patch) {
+    this.config.systemPrompt = patch.systemPrompt;
     if (!this.activeTurn) {
       rebuildContextPrefix(this);
     }

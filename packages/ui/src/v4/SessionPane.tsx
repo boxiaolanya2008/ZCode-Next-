@@ -1245,6 +1245,7 @@ export function SessionPane({
     handleDraftSelectModel,
     handleDraftSelectThought,
     handleDraftSwitchMode,
+    handleDraftSwitchWorkMode,
     promoteComposerDraft,
     captureAcceptedModelSelection,
     replaceComposerDraft,
@@ -3534,6 +3535,14 @@ export function SessionPane({
     [handleDraftSwitchMode],
   );
 
+  // 工作模式（mode list）同样只更新 Composer；agent 侧下一轮（context 重建）生效。
+  const handleSwitchWorkMode = useCallback(
+    (workMode: string) => {
+      handleDraftSwitchWorkMode(workMode);
+    },
+    [handleDraftSwitchWorkMode],
+  );
+
   // context usage 面板的压缩入口（命令文本 = "/compact"，复用 slash 解析路径）。
   const handleSendCompressionCommand = useCallback(
     (command: string) => {
@@ -4414,6 +4423,7 @@ export function SessionPane({
       onSelectModel={handleSelectModel}
       onSelectThought={handleSelectThought}
       onSwitchMode={handleSwitchMode}
+      onSwitchWorkMode={handleSwitchWorkMode}
       onOpenRunningBackgroundWorks={
         sessionId && runningBackgroundWorkCount > 0 ? handleOpenRunningBackgroundWorks : undefined
       }

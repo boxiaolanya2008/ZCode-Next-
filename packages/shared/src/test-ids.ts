@@ -618,6 +618,10 @@ export const TID_V4_BACKGROUND_WORK_ITEM = "v4-background-work-item";
 export const TID_V4_BACKGROUND_WORK_CANCEL = "v4-background-work-cancel";
 /** v4 模型配置显示（data-provider/data-model/data-thought，switchModelConfig 效果投影） */
 export const TID_V4_MODEL_CONFIG = "v4-model-config";
+/** v4 composer 工作模式选择触发器（mode list：编码/界面设计/渗透·已授权） */
+export const TID_V4_WORK_MODE_SELECT_TRIGGER = "v4-work-mode-select-trigger";
+/** v4 composer 工作模式选项（动态后缀为 workMode id） */
+export const TID_V4_WORK_MODE_SELECT_ITEM = "v4-work-mode-select-item";
 // v4-model-provider-input / v4-model-model-input / v4-model-thought-input /
 // v4-model-apply（调试表单）已退役——模型切换由 composer 工具条的
 // TID_CHAT_MODEL_SELECT_* / TID_CHAT_THOUGHT_LEVEL_SELECT_* 承载。

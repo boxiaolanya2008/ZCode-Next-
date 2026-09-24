@@ -1,4 +1,4 @@
-import { resolveExecutionState, type ModelSelection } from "@zcode/shared";
+import { resolveExecutionState, type AgentWorkModeId, type ModelSelection } from "@zcode/shared";
 import { submissionModeSchema, type SubmissionMode } from "@zcode/shared/zcode-protocol-v4";
 import type { ModelSelectionView } from "@zcode/services";
 import { validateModelSelectionOptions } from "@zcode/provider";
@@ -7,12 +7,19 @@ export interface ComposerSubmissionConfig {
   modelSelection: ModelSelection;
   mode: SubmissionMode;
   planEnabled: boolean;
+  /** 工作模式（mode list）；缺省=编码模式。agent 侧据此整段替换 system prompt。 */
+  workMode?: AgentWorkModeId;
 }
 
 /** 在点击提交的瞬间，把 Composer 意图冻结成本次 Submission 的执行配置。 */
 export function createComposerSubmissionConfig(
   composer:
-    | { mode?: string; planEnabled?: boolean; modelSelection?: ModelSelection }
+    | {
+        mode?: string;
+        planEnabled?: boolean;
+        workMode?: AgentWorkModeId;
+        modelSelection?: ModelSelection;
+      }
     | null
     | undefined,
   view: ModelSelectionView | null,
@@ -35,6 +42,7 @@ export function createComposerSubmissionConfig(
   return Object.freeze({
     mode: mode.data === "plan" ? "build" : mode.data,
     planEnabled: resolveExecutionState(composer).planEnabled,
+    ...(composer.workMode ? { workMode: composer.workMode } : {}),
     modelSelection: Object.freeze({
       providerId: selection.providerId,
       modelId: selection.modelId,

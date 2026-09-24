@@ -6,7 +6,11 @@ import { applyComposerPermissionGrant } from "@/v4/composer/composerPermissionGr
 // Workspace presentation 水合只提供 mode 与 slash commands；模型候选、能力和首选值
 // 统一来自目标 Host ModelSelectionView。
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ZCODE_AGENT_PROVIDER, resolveExecutionState } from "@zcode/shared";
+import {
+  isAgentWorkModeId,
+  ZCODE_AGENT_PROVIDER,
+  resolveExecutionState,
+} from "@zcode/shared";
 import { applyComposerPlanTransition } from "@/v4/composer/composerPlanTransition.js";
 import type {
   ZCodeConfigOption,
@@ -37,6 +41,7 @@ import {
 import { resolveAppFollowupMode } from "@/v4/composer/followupModeSettings.js";
 import { logger } from "@/logger.js";
 import { useZCodeSessionStore } from "@/store/zcodeSessionStore.js";
+import { useComposerWorkMode, useComposerWorkModeStore } from "@/store/composerWorkModeStore.js";
 
 /** 目录水合单飞（per workspaceKey）：draft、已有 session 和严格模式双挂载共享一次 RPC。 */
 const workspaceCatalogHydrationFlights = new Map<string, Promise<void>>();
@@ -97,6 +102,8 @@ interface DraftConfigControl {
   handleDraftSelectModel: (modelProvider: string, model: string) => void;
   handleDraftSelectThought: (thought: string) => void;
   handleDraftSwitchMode: (mode: string) => void;
+  /** 切换 composer 工作模式（mode list）；只更新本 scope 的选择，下一轮生效。 */
+  handleDraftSwitchWorkMode: (workMode: string) => void;
 }
 
 export function useDraftConfigControl(params: {
@@ -127,6 +134,12 @@ export function useDraftConfigControl(params: {
   const appFollowupMode = resolveAppFollowupMode(sharedSettings);
   const scopeId = sessionId ?? V4_DRAFT_SCOPE_ROOT;
   const scopeKey = JSON.stringify([workspaceKey, scopeId]);
+  // 工作模式（mode list）：per-scope 选择，默认编码模式；与 mode/model 同 scope 但独立 owner。
+  const workMode = useComposerWorkMode(scopeKey);
+  const setComposerWorkMode = useComposerWorkModeStore((state) => state.setWorkMode);
+  const promoteComposerWorkModeScope = useComposerWorkModeStore((state) => state.promoteScope);
+  const workModeRef = useRef(workMode);
+  workModeRef.current = workMode;
   const loadedScope = useMemo(
     () => ({
       scopeKey,
@@ -183,12 +196,13 @@ export function useDraftConfigControl(params: {
     () => ({
       mode: draft.mode,
       planEnabled: draft.planEnabled ?? false,
+      workMode,
       modelSelection: effectiveSelection,
       provider: effectiveSelection?.providerId ?? "",
       model: effectiveSelection?.modelId ?? "",
       thought: effectiveSelection?.options?.reasoningLevel ?? "",
     }),
-    [draft.mode, draft.planEnabled, effectiveSelection],
+    [draft.mode, draft.planEnabled, workMode, effectiveSelection],
   );
   const draftConfigRef = useRef(draftConfig);
   draftConfigRef.current = draftConfig;
@@ -219,6 +233,7 @@ export function useDraftConfigControl(params: {
       draftConfigRef.current = {
         mode: next.mode,
         planEnabled: next.planEnabled ?? false,
+        workMode: workModeRef.current,
         modelSelection: selection,
         provider: selection?.providerId ?? "",
         model: selection?.modelId ?? "",
@@ -316,8 +331,14 @@ export function useDraftConfigControl(params: {
       );
       if (!written) return;
       clearV4ComposerDraft(workspacePath, workspaceIdentity, V4_DRAFT_SCOPE_ROOT);
+      // 工作模式与正文/模式同 scope：把草稿 scope 的选择转移到真实 session scope，
+      // 重开该会话时才能恢复用户选过的模式。
+      promoteComposerWorkModeScope(
+        scopeKey,
+        JSON.stringify([workspaceKey, targetSessionId]),
+      );
     },
-    [scopeId, scopeKey, workspaceIdentity, workspacePath],
+    [promoteComposerWorkModeScope, scopeId, scopeKey, workspaceIdentity, workspaceKey, workspacePath],
   );
 
   // ── workspace 目录水合（见文件头说明）──
@@ -480,6 +501,15 @@ export function useDraftConfigControl(params: {
     [updateComposerDraft],
   );
 
+  const handleDraftSwitchWorkMode = useCallback(
+    (workMode: string) => {
+      // 工作模式只更新本 scope 的选择；agent 侧下一轮（context 重建）生效。
+      if (!isAgentWorkModeId(workMode)) return;
+      setComposerWorkMode(scopeKey, workMode);
+    },
+    [scopeKey, setComposerWorkMode],
+  );
+
   return {
     modelSelectionRead,
     draftConfig,
@@ -493,6 +523,7 @@ export function useDraftConfigControl(params: {
     handleDraftSelectModel,
     handleDraftSelectThought,
     handleDraftSwitchMode,
+    handleDraftSwitchWorkMode,
   };
 }
 

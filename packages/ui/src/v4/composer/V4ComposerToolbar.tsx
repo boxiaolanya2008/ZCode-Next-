@@ -18,6 +18,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BUILTIN_MODEL_PROVIDER_IDS,
+  DEFAULT_AGENT_WORK_MODE,
   getModelProviderFamilySpec,
   resolveModelProviderFamilySpecByProviderId,
   TID_V4_MODEL_CONFIG,
@@ -38,6 +39,7 @@ import type {
   SessionUsageState,
 } from "@zcode/shared/zcode-protocol-v4";
 import { ModelConfigSelect, type ModelSelectGroup } from "@/ModelConfigSelect.js";
+import { V4ComposerWorkModeControl } from "@/v4/composer/V4ComposerWorkModeControl.js";
 import { Button } from "@/components/ui/button.js";
 import { ChatContextUsage } from "@/chat-input-toolbar/display.js";
 import {
@@ -353,6 +355,8 @@ export interface V4ComposerToolbarProps {
   /** 选中思考深度；modelContext 固定本次用户操作的目标模型。 */
   onSelectThought: (thought: string, modelContext: { provider: string; model: string }) => void;
   onSwitchMode: (mode: string) => void;
+  /** 切换 composer 工作模式（mode list）；只更新下一次 Submission 的工作模式意图。 */
+  onSwitchWorkMode: (workMode: string) => void;
   /** prepare/configOptions 失败时，custom provider 选择走 workspace recovery 链。 */
   onRecoverCustomModelSelection?: (
     value: string,
@@ -378,6 +382,7 @@ function V4ComposerModelControlsImpl({
   onConfigPickerOpenChange,
   onSelectModel,
   onSelectThought,
+  onSwitchWorkMode,
   onSendCompressionCommand,
   onRecoverCustomModelSelection,
 }: V4ComposerToolbarProps) {
@@ -1071,6 +1076,14 @@ function V4ComposerModelControlsImpl({
           providerSubmenuClassName={providerSubmenuClassName}
         />
       ) : null}
+      {/* 工作模式（mode list）：紧邻模型选择；只更新下一次 Submission 的模式意图。 */}
+      <V4ComposerWorkModeControl
+        workMode={draftConfig?.workMode ?? DEFAULT_AGENT_WORK_MODE}
+        onSelectWorkMode={onSwitchWorkMode}
+        disabled={disabled || recoveryPending}
+        activeConfigPicker={activeConfigPicker}
+        onConfigPickerOpenChange={onConfigPickerOpenChange}
+      />
       {thoughtOption ? (
         <ThoughtLevelCycleControl
           indicatorClassName="hidden @xl/composer:block"
