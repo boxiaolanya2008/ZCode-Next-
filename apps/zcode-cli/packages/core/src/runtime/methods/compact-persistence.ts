@@ -127,7 +127,8 @@ export async function persistCompactTimeline(
       sessionID: this.sessionId,
       messageID: payload.messageId,
       type: "compaction",
-      auto: payload.trigger === CompactTrigger.Auto,
+      auto:
+        payload.trigger === CompactTrigger.Auto || payload.trigger === CompactTrigger.SessionEnd,
       trigger: payload.trigger,
       phase: payload.phase,
       compactReason: payload.compactReason,

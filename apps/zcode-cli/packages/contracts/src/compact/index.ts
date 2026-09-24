@@ -12,6 +12,7 @@ export const CompactTrigger = {
   Partial: "partial",
   Reactive: "reactive",
   SessionMemory: "session_memory",
+  SessionEnd: "session_end",
 } as const;
 
 export type CompactTrigger = (typeof CompactTrigger)[keyof typeof CompactTrigger];
@@ -43,6 +44,7 @@ export const CompactReason = {
   ContextLimit: "context_limit",
   ModelDownshift: "model_downshift",
   ProviderOverflow: "provider_overflow",
+  SessionEnd: "session_end",
 } as const;
 
 export type CompactReason = (typeof CompactReason)[keyof typeof CompactReason];
@@ -108,6 +110,7 @@ const compactTimelinePayloadInputSchema = z
       CompactTrigger.Partial,
       CompactTrigger.Reactive,
       CompactTrigger.SessionMemory,
+      CompactTrigger.SessionEnd,
     ]),
     phase: z
       .enum([
@@ -123,6 +126,7 @@ const compactTimelinePayloadInputSchema = z
         CompactReason.ContextLimit,
         CompactReason.ModelDownshift,
         CompactReason.ProviderOverflow,
+        CompactReason.SessionEnd,
       ])
       .optional(),
     display: z.literal(CompactTimelineDisplay.Separator).default(CompactTimelineDisplay.Separator),
@@ -185,6 +189,7 @@ export const compactBoundaryPayloadSchema = z
       CompactTrigger.Partial,
       CompactTrigger.Reactive,
       CompactTrigger.SessionMemory,
+      CompactTrigger.SessionEnd,
     ]),
     phase: z
       .enum([
@@ -200,6 +205,7 @@ export const compactBoundaryPayloadSchema = z
         CompactReason.ContextLimit,
         CompactReason.ModelDownshift,
         CompactReason.ProviderOverflow,
+        CompactReason.SessionEnd,
       ])
       .optional(),
     summarySource: z.enum(["model", "session_memory"]).optional(),

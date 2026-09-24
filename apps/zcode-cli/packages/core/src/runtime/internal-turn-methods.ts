@@ -195,6 +195,7 @@ export interface AgentRuntimeTurnMethods {
     abortSignal: AbortSignal | undefined,
     context: ReactiveCompactLoopContext,
   ): Promise<CompactAttemptOutcome>;
+  compactSessionEnd(traceContext?: TraceContext): Promise<void>;
   compactActiveConversation(
     customInstructions: string | undefined,
     turnTraceContext: TraceContext,

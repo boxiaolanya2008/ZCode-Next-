@@ -165,6 +165,7 @@ export class AgentRuntime {
   private memoryRoot?: string;
   private memoryIndexContent?: string;
   private memoryExtractionScheduler?: ProjectMemoryExtractionScheduler;
+  private sessionEndCompactPromise?: Promise<void>;
   private contextSourcePort?: ContextSourcePort;
   private skillPort?: SkillPort;
   private mcpPort?: McpPort;
@@ -660,6 +661,7 @@ export interface AgentRuntime {
     options?: { abortSignal?: AbortSignal; traceContext?: TraceContext },
   ): Promise<void>;
   isProjectMemoryEnabled(): boolean;
+  compactSessionEnd(traceContext?: TraceContext): Promise<void>;
   /** 缺省等待最多 60 秒；null 等待全部已调度提取结束，不设置 drain deadline。 */
   drainMemoryExtractions(timeoutMs?: number | null): Promise<void>;
 }

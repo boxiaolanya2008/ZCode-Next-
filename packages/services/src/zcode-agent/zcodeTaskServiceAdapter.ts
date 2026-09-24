@@ -5713,7 +5713,8 @@ function timelineTriggerValue(value: unknown): ZCodeTimelineTrigger | undefined 
     value === "auto" ||
     value === "reactive" ||
     value === "partial" ||
-    value === "session_memory"
+    value === "session_memory" ||
+    value === "session_end"
     ? value
     : undefined;
 }

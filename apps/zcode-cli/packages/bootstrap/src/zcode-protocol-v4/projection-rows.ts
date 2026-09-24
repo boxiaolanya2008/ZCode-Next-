@@ -135,7 +135,7 @@ export function mapCompactMarkerStatus(
   }
 }
 
-// CompactTrigger → marker.origin：manual 之外（auto/partial/reactive/session_memory）
+// CompactTrigger → marker.origin：manual 之外（auto/partial/reactive/session_memory/session_end）
 // 一律归 auto —— UI 只区分「用户点的」与「系统触发的」。
 export function mapCompactMarkerOrigin(
   trigger: CompactTrigger,

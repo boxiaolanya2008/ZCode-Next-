@@ -323,7 +323,9 @@ export const zcodeTimelinePartSchema = partBaseSchema
     anchorTurnId: nonEmptyString.optional(),
     time: zcodeTimelinePartTimeSchema.optional(),
     operationId: z.string().optional(),
-    trigger: z.enum(["manual", "auto", "partial", "reactive", "session_memory"]).optional(),
+    trigger: z
+      .enum(["manual", "auto", "partial", "reactive", "session_memory", "session_end"])
+      .optional(),
     phase: z.enum(["standalone_turn", "pre_request", "mid_turn", "reactive"]).optional(),
     compactReason: z.string().optional(),
     boundaryId: z.string().optional(),

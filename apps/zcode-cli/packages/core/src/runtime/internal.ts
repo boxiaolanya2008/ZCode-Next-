@@ -93,6 +93,7 @@ export interface AgentRuntimeInternal
   memoryRoot?: string;
   memoryIndexContent?: string;
   memoryExtractionScheduler?: ProjectMemoryExtractionScheduler;
+  sessionEndCompactPromise?: Promise<void>;
   contextSourcePort?: ContextSourcePort;
   skillPort?: SkillPort;
   mcpPort?: McpPort;
