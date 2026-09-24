@@ -429,7 +429,8 @@ interface ConversationComposerProps {
   /** 选中思考深度；同时带上用户操作时看到的模型，避免异步回流后把 thought 归到另一模型。 */
   onSelectThought: (thought: string, modelContext: { provider: string; model: string }) => void;
   onSwitchMode: (mode: string) => void;
-  /** 打开当前 session 的 Status panel，并直达 Running 明细。 */
+  /** 切换 composer 工作模式（mode list）。 */
+  onSwitchWorkMode: (workMode: string) => void;
   onOpenRunningBackgroundWorks?: () => void;
   /**
    * 后台任务入口点击的落点：`"workflow-run"` = 唯一在跑的工作流直达详情页（宿主判定），
@@ -518,6 +519,7 @@ function ConversationComposerImpl({
   onSelectModel,
   onSelectThought,
   onSwitchMode,
+  onSwitchWorkMode,
   onOpenRunningBackgroundWorks,
   backgroundWorkOpenTarget = "panel",
   runningSubagentCount = 0,
@@ -2057,6 +2059,7 @@ function ConversationComposerImpl({
             onSelectModel={handleSelectModelTrace}
             onSelectThought={onSelectThought}
             onSwitchMode={onSwitchMode}
+            onSwitchWorkMode={onSwitchWorkMode}
             onRecoverCustomModelSelection={onRecoverCustomModelSelection}
             onSendCompressionCommand={onSendCompressionCommand}
           />

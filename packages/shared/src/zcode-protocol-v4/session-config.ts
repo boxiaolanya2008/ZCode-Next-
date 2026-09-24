@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { modelSelectionSchema } from "../model-selection.js";
+import { agentWorkModeSchema } from "../agent-modes.js";
 
 // ── config──
 export const sessionConfigStateSchema = z.object({
@@ -16,6 +17,9 @@ export const sessionConfigStateSchema = z.object({
   // 必须带 default 才不破坏旧快照/旧发送端的解析；投影经 SessionModeChanged 事件更新。
   mode: z.string().default("build"),
   planEnabled: z.boolean().optional(),
+  // additive：composer 工作模式（编码/界面设计/渗透·已授权）。无 default，避免旧快照被
+  // 误判为“显式切回默认”；缺省即编码模式（行为与现状一致）。
+  workMode: agentWorkModeSchema.optional(),
   /** 明确审批结果；草稿按 interactionId 消费一次，普通 mode 更新不重置它。 */
   permissionGrant: z.object({ interactionId: z.string().min(1) }).optional(),
   /** 最近工具转换的关联，供草稿定向同步；不新增可见历史事件。 */

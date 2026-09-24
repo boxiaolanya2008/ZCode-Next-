@@ -70,7 +70,7 @@ interface SkillsServiceOptions {
 }
 
 /** ZCode Agent 工作区级技能目录。 */
-function getWorkspaceZcodeSkillRoot(workspacePath: string): string {
+export function getWorkspaceZcodeSkillRoot(workspacePath: string): string {
   return join(workspacePath, ".zcode", "skills");
 }
 
@@ -80,7 +80,7 @@ function getWorkspaceAgentsSkillRoot(workspacePath: string): string {
 }
 
 /** ZCode Agent 用户级技能目录。 */
-function getUserZcodeSkillRoot(): string {
+export function getUserZcodeSkillRoot(): string {
   return join(resolveUserHomeDir(), ".zcode", "skills");
 }
 

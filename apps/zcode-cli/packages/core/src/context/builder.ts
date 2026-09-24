@@ -13,6 +13,7 @@ import type {
 import type { ToolRegistry } from "../tool/registry.js";
 import { estimateTokens } from "./utils.js";
 import { buildCliPrefixSection } from "./sections/cli-prefix.js";
+import { buildToolUsageGuideSection } from "./sections/tool-usage-guide.js";
 import { buildIdentitySection } from "./sections/identity.js";
 import { buildLanguageStandardsSection } from "./sections/language-standards.js";
 import { buildEngineeringConventionsSection } from "./sections/engineering-conventions.js";
@@ -104,6 +105,16 @@ export class ContextBuilder {
     // 只对脚本说话、可能连读文件工具都没有的子代理是错的身份，且走在正确身份段前面。
     if (!isWorkflowActor) {
       sections.push(buildCliPrefixSection());
+    }
+
+    // 1b. Tool usage guide (stable). 紧贴 cli_prefix，作为 system prompt 开头的一部分，
+    // 教模型优先使用超级工具。随当前 runtime 的工具表演进：没有超级工具时本段缺席。
+    // custom prompt 走整段替换路径，不再注入默认体系，因此这里一并跳过。
+    if (!hasCustomSystemPrompt) {
+      const toolUsageGuideSection = buildToolUsageGuideSection(this.config.guidanceToolNames);
+      if (toolUsageGuideSection) {
+        sections.push(toolUsageGuideSection);
+      }
     }
 
     // 2. Stable agent behavior or custom prompt body

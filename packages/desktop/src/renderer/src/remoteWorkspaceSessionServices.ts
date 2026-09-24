@@ -30,6 +30,9 @@ export function buildRemoteWorkspaceSessionServices(
     // SSH/Docker remote 项目的 skills/plugins/commands 目录位于远端文件系统。
     // 之前这里沿用本机 base services，会拿远端 workspacePath 去本机扫描，导致项目级能力读不到。
     skillsService: remoteServices.skillsService,
+    // Skills 市场（SkillHub）安装/更新落在 skills 目录，必须与 skillsService 一样打到远端，
+    // 否则会把远端 workspacePath 拿去本机 skills 目录安装。
+    skillMarketService: remoteServices.skillMarketService,
     // 远端 skill 同步的 import 必须写入 SSH 主机的 ~/.zcode/skills。
     // 如果继续沿用 base service，UI 会显示同步成功但实际写到本机 ~/.zcode/skills。
     skillSyncService: remoteServices.skillSyncService,

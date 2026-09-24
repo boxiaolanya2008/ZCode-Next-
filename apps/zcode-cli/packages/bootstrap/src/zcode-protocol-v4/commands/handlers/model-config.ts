@@ -4,6 +4,7 @@
 // 每个命令组一个文件：handler 纯函数 (host, envelope) → CommandResult|undefined，
 // 决策逻辑直驱 core（app.setModel / app.setMode / runtime.emit*），不经旧协议 op。
 import type { CollaborationMode, ModelSelection } from "@zcode/contracts";
+import { resolveAgentWorkModeSystemPrompt } from "@zcode/shared";
 import type {
   CommandEnvelope,
   CommandPayloadMap,
@@ -261,6 +262,15 @@ export async function applyRequestedSessionConfig(
   // runtime.setFollowupMode 无同值守卫（无条件追加事件），显式传 "queue" 会产空转 delta。
   if (config.followupMode && config.followupMode !== "queue") {
     await record.app.setFollowupMode(config.followupMode);
+  }
+
+  // workMode：非默认（编码）模式时，用模式提示词整段替换默认 system prompt；
+  // 默认模式解析为 undefined，写回后保持内建提示词（回归安全）。经既有
+  // customSystemPrompt 通道生效，空闲时重建 context 前缀，下一轮生效。
+  if (config.workMode !== undefined) {
+    record.app.runtime.updateConfig({
+      systemPrompt: resolveAgentWorkModeSystemPrompt(config.workMode),
+    });
   }
 }
 

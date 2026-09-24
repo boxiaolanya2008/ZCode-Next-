@@ -241,6 +241,8 @@ export type { OffPeakUpdateTaskParams } from "./session/offPeakTask.js";
 
 // Skills service — ISkillsService is both a type (interface) and value (descriptor)
 export { ISkillsService } from "./skills/skills.js";
+// Skills 市场（SkillHub 接入）—— 只导出 descriptor；工厂在 @zcode/services/node。
+export { ISkillMarketService } from "./skill-market/skillMarket.js";
 export { ISkillSyncService } from "./skill-sync/skillSync.js";
 export { IMcpSyncService } from "./mcp-sync/mcpSync.js";
 export { IPluginSyncService } from "./plugin-sync/pluginSync.js";

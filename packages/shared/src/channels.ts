@@ -118,6 +118,8 @@ export const ServiceChannels = {
   ClientScenes: "client-scenes",
   /** Skills 管理服务 */
   Skills: "skills",
+  /** Skills 市场（SkillHub 接入）：搜索/详情/安装/更新/已安装查询 */
+  SkillMarket: "skill-market",
   /** SSH 远程 skills 同步服务 */
   SkillSync: "skill-sync",
   /** SSH 远程 MCP 同步服务 */

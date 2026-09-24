@@ -209,6 +209,11 @@ export { createCodingPlanSubscriptionService } from "./coding-plan-subscription/
 export { createClientConfigService } from "./client-config/clientConfigService.js";
 export { createClientScenesService } from "./client-scenes/clientScenesService.js";
 export { createSkillsService } from "./skills/skillsService.js";
+export {
+  getWorkspaceZcodeSkillRoot,
+  getUserZcodeSkillRoot,
+} from "./skills/skillsService.js";
+export { createSkillMarketService } from "./skill-market/skillMarketService.js";
 export { createSkillSyncService } from "./skill-sync/skillSyncService.js";
 export { createMcpSyncService } from "./mcp-sync/mcpSyncService.js";
 export { createPluginSyncService } from "./plugin-sync/pluginSyncService.js";
@@ -314,6 +319,7 @@ import { IUsageStatsService } from "./usage-stats/usageStats.js";
 import { ICodingPlanSubscriptionService } from "./coding-plan-subscription/codingPlanSubscription.js";
 import { IClientScenesService } from "./client-scenes/clientScenes.js";
 import { ISkillsService } from "./skills/skills.js";
+import { ISkillMarketService } from "./skill-market/skillMarket.js";
 import { ISkillSyncService } from "./skill-sync/skillSync.js";
 import { IMcpSyncService } from "./mcp-sync/mcpSync.js";
 import { IPluginSyncService } from "./plugin-sync/pluginSync.js";
@@ -399,6 +405,7 @@ import { createClientConfigService } from "./client-config/clientConfigService.j
 import { IClientConfigService } from "./client-config/clientConfig.js";
 import { createClientScenesService } from "./client-scenes/clientScenesService.js";
 import { createSkillsService } from "./skills/skillsService.js";
+import { createSkillMarketService } from "./skill-market/skillMarketService.js";
 import { createSkillSyncService } from "./skill-sync/skillSyncService.js";
 import { createMcpSyncService } from "./mcp-sync/mcpSyncService.js";
 import { createPluginSyncService } from "./plugin-sync/pluginSyncService.js";
@@ -2543,6 +2550,7 @@ export function createLocalServices(options: {
       })(),
     )
     .register(ISkillsService, skillsService)
+    .register(ISkillMarketService, createSkillMarketService())
     .register(ISkillSyncService, createSkillSyncService())
     .register(IMcpSyncService, mcpSyncService)
     // 合并 MCP/Plugin Management 服务装配时误删了 plugin-sync 注册，

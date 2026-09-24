@@ -31,7 +31,7 @@ import { resolveMarketplaceDisplayName } from "@/settings/pluginSourceLabel.js";
 const CATEGORY_VISIBLE_LIMIT = 6;
 const RETIRED_STORE_PLUGIN_ID = `restore-legacy-sessions@${ZCODE_OFFICIAL_PLUGIN_MARKETPLACE_ID}`;
 
-export type PluginStoreSegment = "public" | "personal";
+export type PluginStoreSegment = "public" | "personal" | "skills";
 
 export function PluginStoreListView({
   items: allItems,
@@ -44,6 +44,7 @@ export function PluginStoreListView({
   segment,
   onSegmentChange,
   onOpenManage,
+  skillsPanel,
 }: {
   items: StorePluginItem[];
   order?: PluginStoreOrder | null;
@@ -55,6 +56,8 @@ export function PluginStoreListView({
   segment: PluginStoreSegment;
   onSegmentChange: (segment: PluginStoreSegment) => void;
   onOpenManage: () => void;
+  /** Skills 市场分段内容；由设置页注入，避免列表页直接依赖 Skills 市场服务。 */
+  skillsPanel?: React.ReactNode;
 }) {
   const { intl, locale } = useZCodeIntl();
   const isOfficeMode = useIsOfficeMode();
@@ -142,149 +145,175 @@ export function PluginStoreListView({
 
   return (
     <div className="space-y-8" data-testid="plugin-store-list">
-      {/* 大标题由设置页头部渲染（settings.plugins.title），此处从搜索框开始，避免双标题。 */}
-      {/* 搜索：横跨公开+个人；输入时下方分段布局让位于统一结果流。 */}
-      <SettingsSearchInput
-        data-testid="plugin-store-search"
-        value={query}
-        onChange={(event) => onQueryChange(event.target.value)}
-        placeholder={intl.formatMessage({
-          id: "settings.plugins.store.searchPlaceholder",
-        })}
-      />
-
-      {/* 已安装条：图标点击进详情，齿轮进「管理已安装」视图。 */}
-      {installedItems.length > 0 ? (
-        <section data-testid="plugin-store-installed-strip">
-          <div className="flex items-center justify-between border-b border-border pb-2">
-            <h2 className="text-ui-lg font-semibold text-foreground">
-              {intl.formatMessage({
-                id: "settings.plugins.store.installedStrip",
-              })}
-            </h2>
-            <ControlHintTooltip
-              title={intl.formatMessage({
-                id: "settings.plugins.store.manageInstalled",
-              })}
-            >
-              <Button
-                type="button"
-                data-testid="plugin-store-manage-open"
-                variant="outline"
-                size="icon-lg"
-                aria-label={intl.formatMessage({
-                  id: "settings.plugins.store.manageInstalled",
-                })}
-                onClick={onOpenManage}
-              >
-                <Settings2 className="size-4" aria-hidden="true" />
-              </Button>
-            </ControlHintTooltip>
-          </div>
-          {/* 横向滚动也会裁切纵向溢出；预留角标、缩放和焦点环空间。
-              窄屏不补偿负外边距，避免滚动容器越过页面右边界。 */}
-          <div className="mt-1 flex items-center gap-3 overflow-x-auto px-2 pt-2 pb-1 sm:-mx-2">
-            {installedItems.map((item) => {
-              const displayName = resolveItemDisplayName(item, locale);
-              const updating = actions.operationId === `plugin:update:${item.id}`;
-              return (
-                <ControlHintTooltip key={item.id} title={displayName} side="top" sideOffset={8}>
-                  <div className="relative shrink-0">
-                    <button
-                      type="button"
-                      data-testid="plugin-store-installed-item"
-                      data-plugin-id={item.id}
-                      aria-label={displayName}
-                      className="shrink-0 rounded-xl transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-input-border-focused"
-                      onClick={() => actions.onOpenDetail(item.id)}
-                    >
-                      {/* Installed Strip 只表达已安装集合，启用态统一在管理视图展示，避免用透明度误伤品牌图标。 */}
-                      <PluginStoreAvatar item={item} className="size-10" />
-                    </button>
-                    {canUpdatePluginItem(item) ? (
-                      <button
-                        type="button"
-                        data-testid="plugin-store-installed-item-update"
-                        data-plugin-id={item.id}
-                        aria-label={intl.formatMessage({ id: "settings.plugins.detail.update" })}
-                        className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-success text-success-foreground shadow-sm transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-input-border-focused disabled:opacity-60"
-                        disabled={actions.operationId !== null}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          actions.onUpdate(item.id);
-                        }}
-                      >
-                        {updating ? (
-                          <Loader2 className="size-2.5 animate-spin" aria-hidden="true" />
-                        ) : (
-                          <Download className="size-2.5" aria-hidden="true" />
-                        )}
-                      </button>
-                    ) : null}
-                  </div>
-                </ControlHintTooltip>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
-
-      {/* 公开 / 个人分段。 */}
-      <div className="flex items-center gap-1.5">
-        <SegmentPill
-          active={segment === "public"}
-          testId="plugin-store-segment-public"
-          label={intl.formatMessage({
-            id: "settings.plugins.store.segment.public",
-          })}
-          onClick={() => onSegmentChange("public")}
-        />
-        <SegmentPill
-          active={segment === "personal"}
-          testId="plugin-store-segment-personal"
-          label={intl.formatMessage({
-            id: "settings.plugins.store.segment.personal",
-          })}
-          onClick={() => onSegmentChange("personal")}
-        />
-      </div>
-
-      {keyword ? (
-        <StoreSection
-          key="search"
-          title={intl.formatMessage(
-            { id: "settings.plugins.store.searchResults" },
-            { count: String(searchResults.length) },
-          )}
-        >
-          {searchResults.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border px-4 py-3 text-ui-base text-foreground-subtle">
-              {intl.formatMessage({ id: "settings.plugins.store.searchEmpty" })}
-            </p>
-          ) : (
-            <CardGrid items={searchResults} actions={actions} locale={locale} />
-          )}
-        </StoreSection>
-      ) : segment === "public" ? (
-        <PublicSegment
-          actions={actions}
-          categoryGroups={categoryGroups}
-          expandedGroups={expandedGroups}
-          featuredItems={featuredItems}
-          loading={loading}
-          locale={locale}
-          resolveCategoryLabel={resolveCategoryLabel}
-          onToggleGroup={toggleGroup}
-        />
+      {/* Skills 市场分段：插件市场下方的独立技能来源，隐藏插件专属的搜索/已安装条。 */}
+      {segment === "skills" ? (
+        <div className="space-y-6">
+          <StoreSegments segment={segment} onSegmentChange={onSegmentChange} />
+          {skillsPanel}
+        </div>
       ) : (
-        <PersonalSegment
-          actions={actions}
-          expandedGroups={expandedGroups}
-          groups={personalGroups}
-          locale={locale}
-          onToggleGroup={toggleGroup}
-        />
+        <>
+          {/* 大标题由设置页头部渲染（settings.plugins.title），此处从搜索框开始，避免双标题。 */}
+          {/* 搜索：横跨公开+个人；输入时下方分段布局让位于统一结果流。 */}
+          <SettingsSearchInput
+            data-testid="plugin-store-search"
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder={intl.formatMessage({
+              id: "settings.plugins.store.searchPlaceholder",
+            })}
+          />
+
+          {/* 已安装条：图标点击进详情，齿轮进「管理已安装」视图。 */}
+          {installedItems.length > 0 ? (
+            <section data-testid="plugin-store-installed-strip">
+              <div className="flex items-center justify-between border-b border-border pb-2">
+                <h2 className="text-ui-lg font-semibold text-foreground">
+                  {intl.formatMessage({
+                    id: "settings.plugins.store.installedStrip",
+                  })}
+                </h2>
+                <ControlHintTooltip
+                  title={intl.formatMessage({
+                    id: "settings.plugins.store.manageInstalled",
+                  })}
+                >
+                  <Button
+                    type="button"
+                    data-testid="plugin-store-manage-open"
+                    variant="outline"
+                    size="icon-lg"
+                    aria-label={intl.formatMessage({
+                      id: "settings.plugins.store.manageInstalled",
+                    })}
+                    onClick={onOpenManage}
+                  >
+                    <Settings2 className="size-4" aria-hidden="true" />
+                  </Button>
+                </ControlHintTooltip>
+              </div>
+              {/* 横向滚动也会裁切纵向溢出；预留角标、缩放和焦点环空间。
+                  窄屏不补偿负外边距，避免滚动容器越过页面右边界。 */}
+              <div className="mt-1 flex items-center gap-3 overflow-x-auto px-2 pt-2 pb-1 sm:-mx-2">
+                {installedItems.map((item) => {
+                  const displayName = resolveItemDisplayName(item, locale);
+                  const updating = actions.operationId === `plugin:update:${item.id}`;
+                  return (
+                    <ControlHintTooltip key={item.id} title={displayName} side="top" sideOffset={8}>
+                      <div className="relative shrink-0">
+                        <button
+                          type="button"
+                          data-testid="plugin-store-installed-item"
+                          data-plugin-id={item.id}
+                          aria-label={displayName}
+                          className="shrink-0 rounded-xl transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-input-border-focused"
+                          onClick={() => actions.onOpenDetail(item.id)}
+                        >
+                          {/* Installed Strip 只表达已安装集合，启用态统一在管理视图展示，避免用透明度误伤品牌图标。 */}
+                          <PluginStoreAvatar item={item} className="size-10" />
+                        </button>
+                        {canUpdatePluginItem(item) ? (
+                          <button
+                            type="button"
+                            data-testid="plugin-store-installed-item-update"
+                            data-plugin-id={item.id}
+                            aria-label={intl.formatMessage({ id: "settings.plugins.detail.update" })}
+                            className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-success text-success-foreground shadow-sm transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-input-border-focused disabled:opacity-60"
+                            disabled={actions.operationId !== null}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              actions.onUpdate(item.id);
+                            }}
+                          >
+                            {updating ? (
+                              <Loader2 className="size-2.5 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <Download className="size-2.5" aria-hidden="true" />
+                            )}
+                          </button>
+                        ) : null}
+                      </div>
+                    </ControlHintTooltip>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
+          {/* 公开 / 个人 / Skills 市场分段。 */}
+          <StoreSegments segment={segment} onSegmentChange={onSegmentChange} />
+
+          {keyword ? (
+            <StoreSection
+              key="search"
+              title={intl.formatMessage(
+                { id: "settings.plugins.store.searchResults" },
+                { count: String(searchResults.length) },
+              )}
+            >
+              {searchResults.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-border px-4 py-3 text-ui-base text-foreground-subtle">
+                  {intl.formatMessage({ id: "settings.plugins.store.searchEmpty" })}
+                </p>
+              ) : (
+                <CardGrid items={searchResults} actions={actions} locale={locale} />
+              )}
+            </StoreSection>
+          ) : segment === "public" ? (
+            <PublicSegment
+              actions={actions}
+              categoryGroups={categoryGroups}
+              expandedGroups={expandedGroups}
+              featuredItems={featuredItems}
+              loading={loading}
+              locale={locale}
+              resolveCategoryLabel={resolveCategoryLabel}
+              onToggleGroup={toggleGroup}
+            />
+          ) : (
+            <PersonalSegment
+              actions={actions}
+              expandedGroups={expandedGroups}
+              groups={personalGroups}
+              locale={locale}
+              onToggleGroup={toggleGroup}
+            />
+          )}
+        </>
       )}
+    </div>
+  );
+}
+
+/** 公开 / 个人 / Skills 市场分段选择器。 */
+function StoreSegments({
+  segment,
+  onSegmentChange,
+}: {
+  segment: PluginStoreSegment;
+  onSegmentChange: (segment: PluginStoreSegment) => void;
+}) {
+  const { intl } = useZCodeIntl();
+  return (
+    <div className="flex items-center gap-1.5">
+      <SegmentPill
+        active={segment === "public"}
+        testId="plugin-store-segment-public"
+        label={intl.formatMessage({ id: "settings.plugins.store.segment.public" })}
+        onClick={() => onSegmentChange("public")}
+      />
+      <SegmentPill
+        active={segment === "personal"}
+        testId="plugin-store-segment-personal"
+        label={intl.formatMessage({ id: "settings.plugins.store.segment.personal" })}
+        onClick={() => onSegmentChange("personal")}
+      />
+      <SegmentPill
+        active={segment === "skills"}
+        testId="plugin-store-segment-skills-market"
+        label={intl.formatMessage({ id: "settings.plugins.store.segment.skillsMarket" })}
+        onClick={() => onSegmentChange("skills")}
+      />
     </div>
   );
 }
