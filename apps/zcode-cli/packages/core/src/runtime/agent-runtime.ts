@@ -164,6 +164,7 @@ export class AgentRuntime {
   private latestContextBuildResult?: ContextBuildResult;
   private memoryRoot?: string;
   private memoryIndexContent?: string;
+  private modelStyleMemoryContent?: string;
   private memoryExtractionScheduler?: ProjectMemoryExtractionScheduler;
   private sessionEndCompactPromise?: Promise<void>;
   private contextSourcePort?: ContextSourcePort;

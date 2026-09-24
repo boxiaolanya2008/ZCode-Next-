@@ -19,6 +19,7 @@ export function rebuildContextPrefix(
         {
           memoryIndexContent: runtime.memoryIndexContent,
           model: options.model,
+          modelStyleMemoryContent: runtime.modelStyleMemoryContent,
           persistEnvInfo: false,
         },
       );
@@ -32,7 +33,11 @@ export function rebuildContextPrefix(
   runtime.contextBuilder = runtime.createContextBuilderFromSnapshot(
     contextSnapshot,
     runtime.memoryRoot,
-    { memoryIndexContent: runtime.memoryIndexContent, model: options.model },
+    {
+      memoryIndexContent: runtime.memoryIndexContent,
+      model: options.model,
+      modelStyleMemoryContent: runtime.modelStyleMemoryContent,
+    },
   );
   const effectiveContextResult = runtime.contextBuilder.build();
   const contextEntries = buildContextHistoryEntries(effectiveContextResult);

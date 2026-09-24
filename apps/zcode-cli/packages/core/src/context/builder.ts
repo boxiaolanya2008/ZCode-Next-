@@ -23,6 +23,7 @@ import { buildSkillsSection } from "./sections/skills.js";
 import { buildRequestUserContextSection } from "./sections/request-user-context.js";
 import { buildCurrentDateSection } from "./sections/current-date.js";
 import { buildMemorySection } from "./sections/memory.js";
+import { buildModelStyleMemorySection } from "./sections/model-style-memory.js";
 import { buildDesktopContextSection } from "./sections/desktop.js";
 import {
   buildContextManagementSection,
@@ -211,6 +212,14 @@ export class ContextBuilder {
     });
     if (requestUserContextSection) {
       sections.push(requestUserContextSection);
+    }
+
+    const modelStyleMemorySection = buildModelStyleMemorySection({
+      content: this.config.modelStyleMemoryContent,
+      model: this.config.model,
+    });
+    if (modelStyleMemorySection) {
+      sections.push(modelStyleMemorySection);
     }
 
     const currentDateSection = buildCurrentDateSection(this.config.currentDate);

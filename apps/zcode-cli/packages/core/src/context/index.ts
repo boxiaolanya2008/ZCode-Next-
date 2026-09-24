@@ -14,5 +14,6 @@ export { buildEnvInfoSection, buildGitSystemContextSection } from "./sections/en
 export { buildSkillsSection } from "./sections/skills.js";
 export { buildCurrentDateSection } from "./sections/current-date.js";
 export { buildMemorySection } from "./sections/memory.js";
+export { buildModelStyleMemorySection } from "./sections/model-style-memory.js";
 export { buildDesktopContextSection } from "./sections/desktop.js";
 export { buildToolUsageGuideSection } from "./sections/tool-usage-guide.js";

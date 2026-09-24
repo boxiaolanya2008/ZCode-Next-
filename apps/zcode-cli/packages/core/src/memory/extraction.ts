@@ -1,9 +1,6 @@
-import type { MessageId, MessageWithParts, ToolPart } from "@zcode/contracts";
-import { resolveContainedMemoryFilePath } from "./memory-file-path.js";
+import type { MessageId, MessageWithParts } from "@zcode/contracts";
 import { formatMemoryManifest } from "./recall/manifest.js";
 import type { MemoryManifestEntry } from "./recall/types.js";
-
-const MINIMUM_USER_WORDS = 3;
 
 type MemoryExtractionExecutionStatus = "success" | "no-op" | "error" | "aborted";
 
@@ -20,7 +17,7 @@ type MemoryExtractionDecision =
   | {
       decision: "skip";
       messageCount: number;
-      reason: "direct-memory-write" | "no-user-prose";
+      reason: "no-new-messages";
     };
 
 interface MemoryExtractionExecutionInput {
@@ -42,6 +39,7 @@ export interface MemoryExtractionScheduler<
 export function buildMemoryExtractionPrompt(input: {
   manifest: readonly MemoryManifestEntry[];
   messageCount: number;
+  modelStyleMemoryPath: string;
 }): string {
   const existingMemories =
     input.manifest.length > 0
@@ -59,6 +57,10 @@ export function buildMemoryExtractionPrompt(input: {
     "",
     "If nothing is worth saving, output only 'Nothing to save.' Do not explain why.",
     "",
+    "Also maintain the model-specific coding habit profile at the exact path below. Read it first when it exists, update that same file, and do not create a second profile:",
+    `<model-style-memory-path>${input.modelStyleMemoryPath}</model-style-memory-path>`,
+    "Record only stable, reusable coding preferences inferred from the successful turns: naming, module organization, typing, error handling, tests, formatting, logging, and explicitly confirmed constraints. Do not copy code, tool inputs/outputs, reasoning, credentials, secrets, absolute machine paths, or temporary task state. A style profile is not a place for project facts already recorded elsewhere.",
+    "",
     "If the user explicitly asks you to remember something, save it immediately as whichever type fits best. If they ask you to forget something, find and remove the relevant entry.",
     "",
     "Apply the memory types, what-not-to-save criteria, and frontmatter format from the Memory section of your system prompt \u2014 it is already in your context above.",
@@ -71,12 +73,8 @@ function evaluateMemoryExtraction(
 ): MemoryExtractionDecision {
   const messageCount = countMessagesAfterCursor(snapshot.durableMessages, cursor);
 
-  if (containsDirectMemoryWrite(snapshot, cursor)) {
-    return { decision: "skip", messageCount, reason: "direct-memory-write" };
-  }
-
-  if (!containsEligibleUserProse(snapshot.durableMessages, cursor)) {
-    return { decision: "skip", messageCount, reason: "no-user-prose" };
+  if (messageCount === 0) {
+    return { decision: "skip", messageCount, reason: "no-new-messages" };
   }
 
   return { decision: "run", messageCount };
@@ -223,79 +221,4 @@ function countMessagesAfterCursor(
   if (!cursor) return messages.length;
   const cursorIndex = messages.findIndex((message) => message.info.id === cursor);
   return cursorIndex < 0 ? messages.length : messages.length - cursorIndex - 1;
-}
-
-function containsDirectMemoryWrite(
-  snapshot: MemoryExtractionSnapshot,
-  cursor: MessageId | undefined,
-): boolean {
-  const messages = messagesAfterFoundCursor(snapshot.durableMessages, cursor);
-  if (!messages) return false;
-
-  for (const message of messages) {
-    if (message.info.role !== "assistant") continue;
-    for (const part of message.parts) {
-      if (!isMemoryMutationToolPart(part)) continue;
-      const filePath = part.state.input.file_path;
-      if (typeof filePath !== "string" || filePath.length === 0) continue;
-      if (
-        resolveContainedMemoryFilePath({
-          filePath,
-          rootDir: snapshot.memoryRoot,
-          workingDirectory: snapshot.workingDirectory,
-          workspaceRoot: snapshot.workspaceRoot,
-        })
-      ) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-function containsEligibleUserProse(
-  messages: readonly MessageWithParts[],
-  cursor: MessageId | undefined,
-): boolean {
-  const messagesAfterCursor = messagesAfterFoundCursor(messages, cursor) ?? messages;
-  for (const message of messagesAfterCursor) {
-    if (!isNonMetaUserMessage(message)) continue;
-    for (const part of message.parts) {
-      if (
-        part.type === "text" &&
-        part.ignored !== true &&
-        part.synthetic !== true &&
-        countWords(part.text) >= MINIMUM_USER_WORDS
-      ) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-function messagesAfterFoundCursor(
-  messages: readonly MessageWithParts[],
-  cursor: MessageId | undefined,
-): readonly MessageWithParts[] | undefined {
-  if (!cursor) return messages;
-  const cursorIndex = messages.findIndex((message) => message.info.id === cursor);
-  return cursorIndex < 0 ? undefined : messages.slice(cursorIndex + 1);
-}
-
-function isNonMetaUserMessage(message: MessageWithParts): boolean {
-  return (
-    message.info.role === "user" &&
-    message.info.synthetic !== true &&
-    message.info.visibility !== "model-only"
-  );
-}
-
-function isMemoryMutationToolPart(part: MessageWithParts["parts"][number]): part is ToolPart {
-  return part.type === "tool" && (part.tool === "Write" || part.tool === "Edit");
-}
-
-function countWords(text: string): number {
-  return text.split(/\s+/u).filter(Boolean).length;
 }

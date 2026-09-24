@@ -137,6 +137,7 @@ async function executeProjectMemoryExtraction(
       const prompt = buildMemoryExtractionPrompt({
         manifest,
         messageCount: input.messageCount,
+        modelStyleMemoryPath: input.snapshot.modelStyleMemoryPath,
       });
       const providerMessages = buildProjectMemoryAgentProviderMessages(
         runtime,

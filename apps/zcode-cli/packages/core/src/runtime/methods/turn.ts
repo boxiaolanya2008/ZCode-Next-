@@ -64,6 +64,7 @@ import { appendBrowserTurnScreenshot } from "./browser-turn-screenshot.js";
 import { clearBrowserTurnState } from "../../repl/browser-turn-state.js";
 import { applySubmissionExecutionState, createTurnModel } from "./turn-model.js";
 import { rebuildContextPrefix } from "./context-refresh.js";
+import { loadModelStyleMemoryContent } from "./context.js";
 
 const TARGET_RUN_HEARTBEAT_MS = 15_000;
 
@@ -216,6 +217,7 @@ export async function executeTurnCommand(
       if (this.contextInitialized) {
         // 每个后续 model step 都按该步骤实际持有的 Model 重新投影 Context；
         // Session Selection 只决定未来创建哪个 Model，不能充当执行事实。
+        await loadModelStyleMemoryContent(this, admittedModel, turnTraceContext);
         rebuildContextPrefix(this, { model: admittedModel });
       } else {
         // 首轮初始化已经用 admitted Model 构造并安装完整 Context，随后再 rebuild

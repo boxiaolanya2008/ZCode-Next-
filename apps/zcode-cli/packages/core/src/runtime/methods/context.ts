@@ -18,6 +18,11 @@ import type { AgentRuntimeInternal } from "../internal.js";
 import { ensureMemoryDirectoryExists } from "../../memory/directory.js";
 import { formatProjectMemoryIndexContent } from "../../memory/index-content.js";
 import {
+  MODEL_STYLE_MEMORY_MAX_BYTES,
+  formatModelStyleMemoryContent,
+  resolveModelStyleMemoryPath,
+} from "../../memory/model-style.js";
+import {
   createReadFileStateKey,
   normalizeReadFileStateMtimeMs,
 } from "../../tool/read-file-state.js";
@@ -65,6 +70,7 @@ export async function ensureContextInitialized(
   this.skillLoadOutcome = await this.discoverSkillsForContext(traceContext);
   this.memoryRoot = await this.loadProjectMemoryRoot(traceContext);
   this.memoryIndexContent = await loadProjectMemoryIndexContent(this, this.memoryRoot);
+  this.modelStyleMemoryContent = await loadModelStyleMemoryContent(this, model, traceContext);
   this.contextBuilder = this.createContextBuilderFromSnapshot(snapshot, this.memoryRoot, {
     memoryIndexContent: this.memoryIndexContent,
     model,
@@ -97,7 +103,12 @@ export function createContextBuilderFromSnapshot(
   this: AgentRuntimeInternal,
   snapshot: ContextSourceSnapshot,
   memoryRoot?: string,
-  options: { memoryIndexContent?: string; model?: Model; persistEnvInfo?: boolean } = {},
+  options: {
+    memoryIndexContent?: string;
+    model?: Model;
+    modelStyleMemoryContent?: string;
+    persistEnvInfo?: boolean;
+  } = {},
 ): ContextBuilder {
   const envInfo = snapshot.envInfo;
   // 同步 preview / config-only fallback 会构造 unknown envInfo。
@@ -128,6 +139,8 @@ export function createContextBuilderFromSnapshot(
     userInstructions: snapshot.userInstructions,
     projectContext: snapshot.projectContext,
     memoryIndexContent: options.memoryIndexContent,
+    modelStyleMemoryContent:
+      options.modelStyleMemoryContent ?? this.modelStyleMemoryContent,
     memoryRoot,
     skills: this.skillLoadOutcome,
     agentProfiles: this.config.subagents?.profiles,
@@ -190,6 +203,51 @@ async function loadProjectMemoryIndexContent(
     return read.content;
   } catch {
     // 默认 Memory 分支将缺失或不可读的 index 视为没有该 context source。
+    return undefined;
+  }
+}
+
+export async function loadModelStyleMemoryContent(
+  runtime: AgentRuntimeInternal,
+  model: Model | undefined,
+  traceContext: TraceContext,
+): Promise<string | undefined> {
+  const fileSystemPort = runtime.fileSystemPort;
+  if (!fileSystemPort || !runtime.memoryRoot || !model) {
+    runtime.modelStyleMemoryContent = undefined;
+    return undefined;
+  }
+  const path = resolveModelStyleMemoryPath({
+    memoryRoot: runtime.memoryRoot,
+    modelId: model.modelId,
+    providerId: model.providerId,
+  });
+  try {
+    const read = await fileSystemPort.readTextFile({
+      maxBytes: MODEL_STYLE_MEMORY_MAX_BYTES,
+      path,
+      trace: traceContext,
+    });
+    const formatted = formatModelStyleMemoryContent(read.content);
+    if (!formatted) {
+      runtime.modelStyleMemoryContent = undefined;
+      return undefined;
+    }
+    runtime.readFileState.set(createReadFileStateKey(path, undefined, undefined), {
+      content: read.content,
+      isPartialView: formatted !== read.content,
+      limit: undefined,
+      mtimeMs: normalizeReadFileStateMtimeMs(read.revision?.mtimeMs),
+      offset: undefined,
+      path,
+      readAt: runtime.now(),
+      revisionId: read.revision?.id,
+      sizeBytes: read.sizeBytes,
+    });
+    runtime.modelStyleMemoryContent = formatted;
+    return formatted;
+  } catch {
+    runtime.modelStyleMemoryContent = undefined;
     return undefined;
   }
 }

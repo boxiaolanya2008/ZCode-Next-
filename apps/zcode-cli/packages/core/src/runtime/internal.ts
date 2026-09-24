@@ -92,6 +92,7 @@ export interface AgentRuntimeInternal
   latestContextBuildResult?: ContextBuildResult;
   memoryRoot?: string;
   memoryIndexContent?: string;
+  modelStyleMemoryContent?: string;
   memoryExtractionScheduler?: ProjectMemoryExtractionScheduler;
   sessionEndCompactPromise?: Promise<void>;
   contextSourcePort?: ContextSourcePort;
