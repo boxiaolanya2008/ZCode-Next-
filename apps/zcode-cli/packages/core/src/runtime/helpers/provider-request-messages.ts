@@ -23,6 +23,7 @@ import {
   wrapSystemReminderForSource,
   type SystemReminderSource,
 } from "../../system-reminder/source.js";
+import { sanitizeProviderContextEntries } from "./provider-context-sanitization.js";
 
 export interface ProviderRequestMessageProjectionResult {
   messages: ModelInputMessage[];
@@ -31,6 +32,9 @@ export interface ProviderRequestMessageProjectionResult {
   diagnostics: {
     bubbledAttachmentEntryCount: number;
     latestRealUserMessageIndex?: number;
+    removedFailedToolCallCount: number;
+    removedFailedToolResultCount: number;
+    removedReasoningBlockCount: number;
     strippedRuntimeMetaCount: number;
     cacheControlIndex?: number;
   };
@@ -52,9 +56,11 @@ export function buildProviderRequestMessages(input: {
   useMidConversationSystem?: boolean;
 }): ProviderRequestMessageProjectionResult {
   const useMidConversationSystem = input.useMidConversationSystem !== false;
+  const sanitized = sanitizeProviderContextEntries(input.entries);
+  const entries = sanitized.entries;
   const origins = new ProviderEntryOrigins();
   const reorderResult = reorderAttachmentLikeEntries(
-    projectIncomingMessageEntries(input.entries, origins),
+    projectIncomingMessageEntries(entries, origins),
   );
   const midSystemProjection = useMidConversationSystem
     ? projectMidConversationSystemEntries(reorderResult.entries, origins)
@@ -89,10 +95,13 @@ export function buildProviderRequestMessages(input: {
     diagnostics: {
       bubbledAttachmentEntryCount: reorderResult.bubbledAttachmentEntryCount,
       // 新标记能证明“没有真实用户”；省略索引会让媒体预算按 user role 重新猜来源。
-      ...(finalLatestRealUserMessageIndex >= 0 || input.entries.some(isPresentedInput)
+      ...(finalLatestRealUserMessageIndex >= 0 || entries.some(isPresentedInput)
         ? { latestRealUserMessageIndex: finalLatestRealUserMessageIndex }
         : {}),
-      strippedRuntimeMetaCount: input.entries.filter((entry) => entry.metadata).length,
+      removedFailedToolCallCount: sanitized.removedFailedToolCallCount,
+      removedFailedToolResultCount: sanitized.removedFailedToolResultCount,
+      removedReasoningBlockCount: sanitized.removedReasoningBlockCount,
+      strippedRuntimeMetaCount: entries.filter((entry) => entry.metadata).length,
       ...(cacheControlIndex !== undefined ? { cacheControlIndex } : {}),
     },
   };
