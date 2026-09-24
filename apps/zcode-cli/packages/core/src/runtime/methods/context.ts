@@ -139,8 +139,7 @@ export function createContextBuilderFromSnapshot(
     userInstructions: snapshot.userInstructions,
     projectContext: snapshot.projectContext,
     memoryIndexContent: options.memoryIndexContent,
-    modelStyleMemoryContent:
-      options.modelStyleMemoryContent ?? this.modelStyleMemoryContent,
+    modelStyleMemoryContent: options.modelStyleMemoryContent ?? this.modelStyleMemoryContent,
     memoryRoot,
     skills: this.skillLoadOutcome,
     agentProfiles: this.config.subagents?.profiles,

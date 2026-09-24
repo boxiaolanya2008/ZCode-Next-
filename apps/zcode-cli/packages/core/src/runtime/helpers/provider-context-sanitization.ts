@@ -71,10 +71,10 @@ function sanitizeMessage(
     onRemovedReasoningBlock: () => void;
   },
 ): ModelInputMessage | undefined {
-  const content = typeof message.content === "string" ? message.content : stripReasoningBlocks(
-    message.content,
-    counters.onRemovedReasoningBlock,
-  );
+  const content =
+    typeof message.content === "string"
+      ? message.content
+      : stripReasoningBlocks(message.content, counters.onRemovedReasoningBlock);
   const normalizedContent = Array.isArray(content) && content.length === 0 ? "" : content;
   const toolCalls = message.toolCalls?.filter((toolCall) => {
     if (!failedToolCallIds.has(toolCall.id)) return true;
