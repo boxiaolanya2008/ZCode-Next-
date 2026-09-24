@@ -8,6 +8,11 @@ export * from "./json-schema.js";
 export * from "./read.js";
 export * from "./write.js";
 export * from "./edit.js";
+// 超级工具：BatchEdit / AtomicEdit / SmartSearch。上层能力，底层复用 Edit / Glob / Grep 实现；
+// 名字常量被 core 的工具注册与系统提示词导引段读走，漏掉这些导出会让注册面静默失效。
+export * from "./batch-edit.js";
+export * from "./atomic-edit.js";
+export * from "./smart-search.js";
 export * from "./apply-patch.js";
 export * from "./bash.js";
 export * from "./node-repl.js";

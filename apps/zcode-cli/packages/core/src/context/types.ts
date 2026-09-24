@@ -50,6 +50,7 @@ export type ContextSource =
   | "desktop_context" // ZCode Desktop 渲染与交互协议
   | "language_standards" // 语言编码规范（稳定段：写某语言代码前先读对应规范）
   | "engineering_conventions" // 工程约定（稳定段：SVG 图标制作 + Git 提交信息格式）
+  | "tool_usage_guide" // 超级工具使用导引（稳定段：system prompt 开头，与 cli_prefix 相邻）
 
 export type ContextInjectionTarget = "system" | "meta_user";
 

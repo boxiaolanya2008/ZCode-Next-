@@ -21,6 +21,11 @@ import type { AgentProfile } from "../../subagent/profile.js";
 import { readToolEntry } from "./read.js";
 import { writeToolEntry } from "./write.js";
 import { editToolEntry } from "./edit.js";
+// 超级工具：上层能力，底层复用 Edit / Glob / Grep。默认对所有 runtime 注册，
+// 由 registerBuiltInTools 的 allowlist/disallowlist 统一收口。
+import { batchEditToolEntry } from "./batch-edit.js";
+import { atomicEditToolEntry } from "./atomic-edit.js";
+import { smartSearchToolEntry } from "./smart-search.js";
 import { bashToolEntry, createBashToolEntry } from "./bash.js";
 import type { BashTimeoutPolicy } from "../bash-timeout-policy.js";
 import { createJsToolEntry, jsToolEntry } from "./node-repl.js";
@@ -77,6 +82,10 @@ export const builtInTools: ToolEntry[] = [
   readToolEntry,
   writeToolEntry,
   editToolEntry,
+  // 超级工具与基础工具并存：Write/Edit 保留，超级工具作为上层能力，提示词引导模型优先使用。
+  batchEditToolEntry,
+  atomicEditToolEntry,
+  smartSearchToolEntry,
   // applyPatchToolEntry,
   bashToolEntry,
   globToolEntry,

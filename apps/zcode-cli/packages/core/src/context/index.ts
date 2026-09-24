@@ -15,3 +15,4 @@ export { buildSkillsSection } from "./sections/skills.js";
 export { buildCurrentDateSection } from "./sections/current-date.js";
 export { buildMemorySection } from "./sections/memory.js";
 export { buildDesktopContextSection } from "./sections/desktop.js";
+export { buildToolUsageGuideSection } from "./sections/tool-usage-guide.js";
