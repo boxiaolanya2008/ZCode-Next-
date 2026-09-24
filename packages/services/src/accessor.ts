@@ -23,6 +23,7 @@ import type { ICodingPlanSubscriptionService } from "./coding-plan-subscription/
 import type { IClientConfigService } from "./client-config/clientConfig.js";
 import type { IClientScenesService } from "./client-scenes/clientScenes.js";
 import type { ISkillsService } from "./skills/skills.js";
+import type { ISkillMarketService } from "./skill-market/skillMarket.js";
 import type { ISkillSyncService } from "./skill-sync/skillSync.js";
 import type { IMcpSyncService } from "./mcp-sync/mcpSync.js";
 import type { IPluginSyncService } from "./plugin-sync/pluginSync.js";
@@ -73,6 +74,7 @@ export interface IServiceAccessor {
   /** 闲时任务管理（独立服务面）。 */
   readonly offPeakTaskService: IOffPeakTaskService;
   readonly skillsService: ISkillsService;
+  readonly skillMarketService: ISkillMarketService;
   readonly skillSyncService: ISkillSyncService;
   readonly mcpSyncService: IMcpSyncService;
   readonly pluginSyncService: IPluginSyncService;

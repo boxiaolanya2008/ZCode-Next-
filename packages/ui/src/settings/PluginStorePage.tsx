@@ -25,6 +25,7 @@ import {
   PluginStoreDetailView,
 } from "@/settings/PluginStoreDetailView.js";
 import { PluginStoreSourcesDialog } from "@/settings/PluginStoreSourcesDialog.js";
+import { SkillsMarketPanel } from "@/settings/SkillsMarketPanel.js";
 import type { PluginStoreActions } from "@/settings/PluginStoreCard.js";
 import {
   buildStoreItems,
@@ -549,6 +550,13 @@ export function PluginStorePage({
           segment={segment}
           onSegmentChange={setSegment}
           onOpenManage={onManageInstalled}
+          skillsPanel={
+            <SkillsMarketPanel
+              workspacePath={workspacePath}
+              workspaceIdentity={normalizedWorkspaceIdentity ?? undefined}
+              onAfterInstall={refreshAfterPluginChange}
+            />
+          }
         />
       )}
 
